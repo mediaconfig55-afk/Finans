@@ -1,50 +1,44 @@
 {
   "expo": {
-    "name": "FINANSIM",
-    "slug": "finansim",
+    "name": "Finans",
+    "slug": "Finans",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
-    "backgroundColor": "#000000",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.finans.app"
+      "supportsTablet": true
     },
     "android": {
+      "package": "com.finans.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#000000"
+        "backgroundColor": "#ffffff"
       },
-      "package": "com.finans.app",
-      "newArchEnabled": false,
-      "permissions": [
-        "android.permission.USE_BIOMETRIC",
-        "android.permission.USE_FINGERPRINT"
-      ]
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "permissions": []
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font",
-      [
-        "expo-local-authentication",
-        {
-          "faceIDPermission": "Uygulamaya güvenli giriş yapabilmek için FaceID izni verin."
-        }
-      ],
+      "expo-sqlite",
+      "@react-native-community/datetimepicker",
       "expo-build-properties"
     ],
     "extra": {
       "eas": {
-        "projectId": "8e5edae3-1aa7-4974-a857-e0d850dc6b34"
+        "projectId": "7bb13001-e8c7-4bf5-b7d2-c993527ad264"
       }
-    }
+    },
+    "owner": "ghost55"
   }
 }
