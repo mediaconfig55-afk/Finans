@@ -124,7 +124,7 @@ MIT
 
 ## 👨‍💻 Geliştirici
 
-[VAS6150F](https://github.com/mediaconfig55-afk)
+[GHOSTMAN](https://github.com/mediaconfig55-afk)
 
 ---
 
