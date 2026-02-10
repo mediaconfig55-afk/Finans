@@ -38,6 +38,11 @@
           "faceIDPermission": "Uygulamaya güvenli giriş yapabilmek için FaceID izni verin."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "8e5edae3-1aa7-4974-a857-e0d850dc6b34"
+      }
+    }
   }
 }
