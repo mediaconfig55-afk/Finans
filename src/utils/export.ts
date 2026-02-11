@@ -1,7 +1,8 @@
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import * as DocumentPicker from 'expo-document-picker';
 import XLSX from 'xlsx';
-import { Transaction, Debt } from '../types';
+import { Transaction, Debt, Reminder } from '../types';
 import { formatShortDate } from './format';
 
 export const exportToExcel = async (transactions: Transaction[], debts: Debt[]) => {
@@ -49,5 +50,76 @@ export const exportToExcel = async (transactions: Transaction[], debts: Debt[]) 
     } catch (error) {
         console.error("Excel Export Error:", error);
         alert('Dosya oluşturulurken bir hata oluştu.');
+    }
+};
+
+// Backup: Tüm verileri JSON olarak dışa aktar
+export const exportBackup = async (transactions: Transaction[], debts: Debt[], reminders: Reminder[]) => {
+    try {
+        const backupData = {
+            version: '1.0.0',
+            exportDate: new Date().toISOString(),
+            data: {
+                transactions,
+                debts,
+                reminders
+            }
+        };
+
+        const jsonString = JSON.stringify(backupData, null, 2);
+        const uri = ((FileSystem as any).documentDirectory || (FileSystem as any).cacheDirectory) + `finans_yedek_${Date.now()}.json`;
+
+        await FileSystem.writeAsStringAsync(uri, jsonString, {
+            encoding: 'utf8' as any
+        });
+
+        if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(uri, {
+                mimeType: 'application/json',
+                dialogTitle: 'Yedek Dosyasını Kaydet'
+            });
+            return true;
+        } else {
+            alert('Paylaşım özelliği bu cihazda kullanılamıyor.');
+            return false;
+        }
+    } catch (error) {
+        console.error("Backup Error:", error);
+        throw new Error('Yedek oluşturulurken bir hata oluştu.');
+    }
+};
+
+// Restore: JSON dosyasından verileri içe aktar
+export const importBackup = async (): Promise<{ transactions: Transaction[], debts: Debt[], reminders: Reminder[] } | null> => {
+    try {
+        const result = await DocumentPicker.getDocumentAsync({
+            type: 'application/json',
+            copyToCacheDirectory: true
+        });
+
+        if (result.canceled) {
+            return null;
+        }
+
+        const fileUri = result.assets[0].uri;
+        const fileContent = await FileSystem.readAsStringAsync(fileUri, {
+            encoding: 'utf8' as any
+        });
+
+        const backupData = JSON.parse(fileContent);
+
+        // Validate backup data structure
+        if (!backupData.data || !backupData.data.transactions || !backupData.data.debts || !backupData.data.reminders) {
+            throw new Error('Geçersiz yedek dosyası formatı.');
+        }
+
+        return {
+            transactions: backupData.data.transactions,
+            debts: backupData.data.debts,
+            reminders: backupData.data.reminders
+        };
+    } catch (error) {
+        console.error("Restore Error:", error);
+        throw new Error('Yedek dosyası okunurken bir hata oluştu.');
     }
 };

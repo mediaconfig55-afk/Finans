@@ -1,9 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-// @ts-ignore
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from 'react-native-paper';
+import { useTheme, Icon } from 'react-native-paper';
 
 import {
     DashboardScreen,
@@ -41,7 +39,7 @@ function TabNavigator() {
                 options={{
                     tabBarLabel: 'Özet',
                     tabBarIcon: ({ color, size }: { color: string, size: number }) => (
-                        <MaterialCommunityIcons name="view-dashboard" color={color} size={size} />
+                        <Icon source="view-dashboard" color={color} size={size} />
                     ),
                 }}
             />
@@ -51,7 +49,7 @@ function TabNavigator() {
                 options={{
                     tabBarLabel: 'İşlemler',
                     tabBarIcon: ({ color, size }: { color: string, size: number }) => (
-                        <MaterialCommunityIcons name="format-list-bulleted" color={color} size={size} />
+                        <Icon source="format-list-bulleted" color={color} size={size} />
                     ),
                 }}
             />
@@ -61,7 +59,7 @@ function TabNavigator() {
                 options={{
                     tabBarLabel: 'Analiz',
                     tabBarIcon: ({ color, size }: { color: string, size: number }) => (
-                        <MaterialCommunityIcons name="chart-pie" color={color} size={size} />
+                        <Icon source="chart-bar" color={color} size={size} />
                     ),
                 }}
             />
@@ -71,7 +69,7 @@ function TabNavigator() {
                 options={{
                     tabBarLabel: 'Borçlar',
                     tabBarIcon: ({ color, size }: { color: string, size: number }) => (
-                        <MaterialCommunityIcons name="handshake" color={color} size={size} />
+                        <Icon source="account-cash" color={color} size={size} />
                     ),
                 }}
             />

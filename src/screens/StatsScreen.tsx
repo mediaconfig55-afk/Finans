@@ -1,22 +1,103 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, Dimensions } from 'react-native';
-import { Text, useTheme, SegmentedButtons } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, Dimensions, Alert } from 'react-native';
+import { Text, useTheme, SegmentedButtons, Button, Divider, Snackbar } from 'react-native-paper';
 import { PieChart, BarChart } from 'react-native-gifted-charts';
 import { useStore } from '../store';
 import { formatCurrency } from '../utils/format';
 import { Transaction } from '../types';
+import { ScreenWrapper } from '../components/ScreenWrapper';
+import { exportToExcel, exportBackup, importBackup } from '../utils/export';
+import { Repository } from '../database/repository';
 
 const screenWidth = Dimensions.get('window').width;
 
 export const StatsScreen = () => {
     const theme = useTheme();
-    const { transactions, fetchTransactions } = useStore();
+    const { transactions, debts, reminders, fetchTransactions, fetchDebts, fetchReminders, refreshDashboard } = useStore();
     const [chartMode, setChartMode] = useState<'category' | 'monthly' | 'daily'>('category');
     const [selectedType, setSelectedType] = useState<'expense' | 'income'>('expense');
+    const [loading, setLoading] = useState(false);
+    const [snackbarVisible, setSnackbarVisible] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
 
     useEffect(() => {
         fetchTransactions();
+        fetchDebts();
+        fetchReminders();
     }, []);
+
+    const showToast = (message: string) => {
+        setSnackbarMessage(message);
+        setSnackbarVisible(true);
+    };
+
+    const handleExcelExport = async () => {
+        setLoading(true);
+        try {
+            await exportToExcel(transactions, debts);
+            showToast('Excel dosyası başarıyla oluşturuldu ✓');
+        } catch (error) {
+            Alert.alert('Hata', 'Excel dosyası oluşturulurken bir hata oluştu.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleBackup = async () => {
+        setLoading(true);
+        try {
+            await exportBackup(transactions, debts, reminders);
+            showToast('Yedek başarıyla oluşturuldu ✓');
+        } catch (error) {
+            Alert.alert('Hata', 'Yedek oluşturulurken bir hata oluştu.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRestore = async () => {
+        Alert.alert(
+            'Veri Geri Yükleme',
+            'Mevcut tüm veriler silinip yedek dosyasındaki veriler yüklenecek. Devam etmek istiyor musunuz?',
+            [
+                { text: 'İptal', style: 'cancel' },
+                {
+                    text: 'Devam Et',
+                    style: 'destructive',
+                    onPress: async () => {
+                        setLoading(true);
+                        try {
+                            const backupData = await importBackup();
+                            if (!backupData) {
+                                setLoading(false);
+                                return; // User cancelled
+                            }
+
+                            // Clear all data
+                            await Repository.clearAllData();
+
+                            // Insert backup data
+                            await Repository.bulkInsertTransactions(backupData.transactions);
+                            await Repository.bulkInsertDebts(backupData.debts);
+                            await Repository.bulkInsertReminders(backupData.reminders);
+
+                            // Refresh UI
+                            await refreshDashboard();
+                            await fetchTransactions();
+                            await fetchDebts();
+                            await fetchReminders();
+
+                            showToast('Veriler başarıyla geri yüklendi ✓');
+                        } catch (error) {
+                            Alert.alert('Hata', error instanceof Error ? error.message : 'Veriler geri yüklenirken bir hata oluştu.');
+                        } finally {
+                            setLoading(false);
+                        }
+                    }
+                }
+            ]
+        );
+    };
 
     // --- Category Pie Chart Data ---
     const filteredTransactions = transactions.filter(t => t.type === selectedType);
@@ -97,8 +178,8 @@ export const StatsScreen = () => {
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScreenWrapper>
+            <ScrollView contentContainerStyle={styles.content}>
                 <Text variant="headlineSmall" style={styles.title}>Analiz</Text>
 
                 <SegmentedButtons
@@ -204,8 +285,69 @@ export const StatsScreen = () => {
                         )}
                     </View>
                 )}
+
+                {/* Veri Yönetimi Bölümü */}
+                <Divider style={{ marginVertical: 24 }} />
+                <Text variant="titleLarge" style={{ fontWeight: 'bold', marginBottom: 16 }}>
+                    Veri Yönetimi
+                </Text>
+                <View style={styles.dataManagementContainer}>
+                    <Button
+                        mode="contained"
+                        icon="database-export"
+                        onPress={handleBackup}
+                        loading={loading}
+                        style={styles.dataButton}
+                        contentStyle={{ paddingVertical: 8 }}
+                    >
+                        Yedek Oluştur (JSON)
+                    </Button>
+                    <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 16 }}>
+                        Tüm verilerinizi JSON formatında dışa aktarın
+                    </Text>
+
+                    <Button
+                        mode="contained"
+                        icon="database-import"
+                        onPress={handleRestore}
+                        loading={loading}
+                        style={styles.dataButton}
+                        contentStyle={{ paddingVertical: 8 }}
+                    >
+                        Yedek Geri Yükle
+                    </Button>
+                    <Text variant="bodySmall" style={{ color: theme.colors.outline, marginBottom: 16 }}>
+                        JSON dosyasından verilerinizi içe aktarın
+                    </Text>
+
+                    <Button
+                        mode="contained"
+                        icon="microsoft-excel"
+                        onPress={handleExcelExport}
+                        loading={loading}
+                        style={styles.dataButton}
+                        contentStyle={{ paddingVertical: 8 }}
+                    >
+                        Excel Olarak İndir
+                    </Button>
+                    <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
+                        Verilerinizi .xlsx formatında görüntüleyin
+                    </Text>
+                </View>
             </ScrollView>
-        </View>
+
+            <Snackbar
+                visible={snackbarVisible}
+                onDismiss={() => setSnackbarVisible(false)}
+                duration={2000}
+                action={{
+                    label: 'Tamam',
+                    onPress: () => setSnackbarVisible(false),
+                }}
+            >
+                {snackbarMessage}
+            </Snackbar>
+        </ScreenWrapper>
     );
 };
 
@@ -213,9 +355,13 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
+    content: {
+        padding: 16,
+        paddingBottom: 80,
+    },
     scrollContent: {
         padding: 16,
-        paddingBottom: 40,
+        paddingBottom: 80,
     },
     title: {
         marginBottom: 16,
@@ -253,5 +399,11 @@ const styles = StyleSheet.create({
     emptyContainer: {
         alignItems: 'center',
         marginTop: 50,
+    },
+    dataManagementContainer: {
+        marginBottom: 32,
+    },
+    dataButton: {
+        marginBottom: 8,
     }
 });

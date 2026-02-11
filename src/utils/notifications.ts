@@ -7,6 +7,8 @@ Notifications.setNotificationHandler({
         shouldShowAlert: true,
         shouldPlaySound: true,
         shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
     }),
 });
 
@@ -36,36 +38,53 @@ export async function registerForPushNotificationsAsync() {
     }
 }
 
-export async function scheduleReminderNotification(title: string, dayOfMonth: number, amount: number) {
-    // Calculate next trigger date
-    const now = new Date();
-    let triggerDate = new Date();
-
-    // Set to the specific day of month
-    triggerDate.setDate(dayOfMonth);
-    triggerDate.setHours(9, 0, 0, 0); // 9:00 AM
-
-    // If the date is in the past (e.g. today is 15th, reminder is 10th), schedule for next month
-    // OR if it's today but past 9 AM, schedule for next month
-    if (triggerDate <= now) {
-        triggerDate.setMonth(triggerDate.getMonth() + 1);
+export async function scheduleReminderNotification(reminderId: number, title: string, dayOfMonth: number, amount: number) {
+    // Cancel existing notifications for this reminder
+    try {
+        await Notifications.cancelScheduledNotificationAsync(`reminder_${reminderId}`);
+    } catch (e) {
+        // Ignore if doesn't exist
     }
 
-    const trigger = triggerDate;
+    // Schedule for next 12 months
+    const now = new Date();
+    const scheduledCount = 0;
 
-    // Schedule
-    await Notifications.scheduleNotificationAsync({
-        content: {
-            title: "Fatura Hatırlatıcı 🔔",
-            body: `${title} için ödeme zamanı! Tutar: ${amount}₺`,
-            sound: true,
-        },
-        trigger: trigger as any,
-    });
+    for (let i = 0; i < 12; i++) {
+        const triggerDate = new Date();
+        triggerDate.setMonth(now.getMonth() + i);
+        triggerDate.setDate(dayOfMonth);
+        triggerDate.setHours(9, 0, 0, 0);
 
-    return trigger;
+        // Skip if in the past
+        if (triggerDate <= now) continue;
+
+        try {
+            await Notifications.scheduleNotificationAsync({
+                identifier: `reminder_${reminderId}_${i}`,
+                content: {
+                    title: "Fatura Hatırlatıcı 🔔",
+                    body: `${title} için ödeme zamanı! Tutar: ${amount}₺`,
+                    sound: true,
+                    data: { reminderId, month: i },
+                },
+                trigger: { type: 'date', date: triggerDate } as any,
+            });
+        } catch (error) {
+            console.error('Error scheduling notification:', error);
+        }
+    }
+
+    return now;
 }
 
-export async function cancelAllNotifications() {
-    await Notifications.cancelAllScheduledNotificationsAsync();
+export async function cancelReminderNotifications(reminderId: number) {
+    // Cancel all notifications for this reminder
+    for (let i = 0; i < 12; i++) {
+        try {
+            await Notifications.cancelScheduledNotificationAsync(`reminder_${reminderId}_${i}`);
+        } catch (e) {
+            // Ignore if doesn't exist
+        }
+    }
 }

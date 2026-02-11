@@ -7,7 +7,13 @@ import { exportToExcel } from '../utils/export';
 
 export const SettingsScreen = () => {
     const theme = useTheme();
-    const { transactions, debts, fetchDebts, fetchTransactions } = useStore();
+    // FIX: Separate selectors to avoid re-render loop
+    const transactions = useStore((state) => state.transactions);
+    const debts = useStore((state) => state.debts);
+    const fetchDebts = useStore((state) => state.fetchDebts);
+    const fetchTransactions = useStore((state) => state.fetchTransactions);
+    const themeMode = useStore((state) => state.theme);
+    const setTheme = useStore((state) => state.setTheme);
     const [exporting, setExporting] = useState(false);
 
     const handleExport = async () => {
@@ -54,13 +60,13 @@ export const SettingsScreen = () => {
             </List.Section>
             <Divider />
 
-            {/* Existing settings placeholders */}
             <List.Section>
                 <List.Subheader>Genel</List.Subheader>
                 <List.Item
-                    title="Karanlık Mod"
+                    title="Karanlık Tema"
+                    description="Koyu renk temasını kullan"
                     left={props => <List.Icon {...props} icon="theme-light-dark" />}
-                    right={() => <Switch value={false} onValueChange={() => { }} disabled />}
+                    right={() => <Switch value={themeMode === 'dark'} onValueChange={(value) => setTheme(value ? 'dark' : 'light')} color={theme.colors.primary} />}
                 />
                 <List.Item
                     title="Bildirimler"

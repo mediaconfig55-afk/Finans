@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
-import { TextInput, Button, SegmentedButtons, HelperText, useTheme, Switch, Text } from 'react-native-paper';
+import { TextInput, Button, SegmentedButtons, HelperText, useTheme, Switch, Text, Snackbar } from 'react-native-paper';
 import { useForm, Controller } from 'react-hook-form';
 import { useNavigation } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -44,6 +44,13 @@ export const AddTransactionScreen = () => {
     const [type, setType] = useState<'income' | 'expense'>('expense');
     const [date, setDate] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [snackbarVisible, setSnackbarVisible] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+
+    const showToast = (message: string) => {
+        setSnackbarMessage(message);
+        setSnackbarVisible(true);
+    };
 
     const { control, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<any>({
         resolver: zodResolver(schema),
@@ -80,6 +87,10 @@ export const AddTransactionScreen = () => {
                     date: date.toISOString(),
                     description: `${data.description || 'Taksit'} (1/${data.installmentCount})`,
                 });
+                showToast(`Taksitli işlem başarıyla eklendi ✓`);
+                setTimeout(() => {
+                    navigation.goBack();
+                }, 1000);
 
             } else {
                 // Normal Transaction
@@ -87,11 +98,14 @@ export const AddTransactionScreen = () => {
                     type,
                     amount: data.amount,
                     category: data.category,
-                    date: date.toISOString(),
                     description: data.description,
+                    date: date.toISOString().split('T')[0],
                 });
+                showToast(`${type === 'income' ? 'Gelir' : 'Gider'} başarıyla eklendi ✓`);
+                setTimeout(() => {
+                    navigation.goBack();
+                }, 1000);
             }
-            navigation.goBack();
         } catch (error) {
             console.error(error);
             Alert.alert('Hata', 'İşlem kaydedilirken bir hata oluştu');
@@ -249,6 +263,18 @@ export const AddTransactionScreen = () => {
 
                 </ScrollView>
             </KeyboardAvoidingView>
+
+            <Snackbar
+                visible={snackbarVisible}
+                onDismiss={() => setSnackbarVisible(false)}
+                duration={2000}
+                action={{
+                    label: 'Tamam',
+                    onPress: () => setSnackbarVisible(false),
+                }}
+            >
+                {snackbarMessage}
+            </Snackbar>
         </SafeAreaView>
     );
 };

@@ -6,8 +6,11 @@ interface AppState {
     transactions: Transaction[];
     installments: Installment[];
     debts: Debt[];
-    kpi: { totalIncome: number; totalExpense: number };
+    kpi: { totalIncome: number; totalExpense: number; totalDebt: number };
     loading: boolean;
+    theme: 'light' | 'dark';
+    userName: string | null;
+    hasCompletedOnboarding: boolean;
 
     fetchTransactions: () => Promise<void>;
     addTransaction: (t: Omit<Transaction, 'id'>) => Promise<void>;
@@ -30,7 +33,10 @@ interface AppState {
     addReminder: (r: Omit<Reminder, 'id'>) => Promise<void>;
     deleteReminder: (id: number) => Promise<void>;
 
+    setTheme: (theme: 'light' | 'dark') => void;
     refreshDashboard: () => Promise<void>;
+    setUserName: (name: string) => void;
+    setOnboardingComplete: () => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -40,8 +46,24 @@ export const useStore = create<AppState>((set, get) => ({
 
     dailySpending: [],
     reminders: [],
-    kpi: { totalIncome: 0, totalExpense: 0 },
+    kpi: { totalIncome: 0, totalExpense: 0, totalDebt: 0 },
     loading: false,
+    theme: 'dark', // Default dark theme
+    userName: null,
+    hasCompletedOnboarding: false,
+
+    refreshDashboard: async () => {
+        set({ loading: true });
+        const [transactions, kpiData, dailySpending, reminders, totalDebt] = await Promise.all([
+            Repository.getTransactions(),
+            Repository.getKpiSummary(),
+            Repository.getDailySpending(),
+            Repository.getReminders(),
+            Repository.getTotalDebt(),
+        ]);
+        const kpi = { ...kpiData, totalDebt };
+        set({ transactions, kpi, dailySpending, reminders, loading: false });
+    },
 
     fetchTransactions: async () => {
         set({ loading: true });
@@ -83,21 +105,25 @@ export const useStore = create<AppState>((set, get) => ({
     addDebt: async (d) => {
         await Repository.addDebt(d);
         await get().fetchDebts();
+        get().refreshDashboard();
     },
 
-    toggleDebtStatus: async (id, status) => {
-        await Repository.toggleDebtStatus(id, status);
+    toggleDebtStatus: async (id, currentStatus) => {
+        await Repository.toggleDebtStatus(id, currentStatus);
         await get().fetchDebts();
+        get().refreshDashboard();
     },
 
     deleteDebt: async (id) => {
         await Repository.deleteDebt(id);
         await get().fetchDebts();
+        get().refreshDashboard();
     },
 
-    updateDebt: async (d) => {
-        await Repository.updateDebt(d);
+    updateDebt: async (debt) => {
+        await Repository.updateDebt(debt);
         await get().fetchDebts();
+        get().refreshDashboard();
     },
 
     updateTransaction: async (t) => {
@@ -113,17 +139,18 @@ export const useStore = create<AppState>((set, get) => ({
     addReminder: async (r) => {
         await Repository.addReminder(r);
         await get().fetchReminders();
+        get().refreshDashboard();
     },
 
     deleteReminder: async (id) => {
         await Repository.deleteReminder(id);
         await get().fetchReminders();
+        get().refreshDashboard();
     },
 
-    refreshDashboard: async () => {
-        await get().fetchTransactions();
-        const kpi = await Repository.getKpiSummary();
-        const dailySpending = await Repository.getDailySpending();
-        set({ kpi, dailySpending });
-    }
+    setTheme: (theme) => set({ theme }),
+
+    setUserName: (name) => set({ userName: name }),
+
+    setOnboardingComplete: () => set({ hasCompletedOnboarding: true }),
 }));

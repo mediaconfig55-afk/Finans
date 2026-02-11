@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
-import { TextInput, Button, SegmentedButtons, HelperText, useTheme } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { TextInput, Button, HelperText, useTheme, Text, Snackbar } from 'react-native-paper';
 import { useForm, Controller } from 'react-hook-form';
 import { useNavigation } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -8,9 +8,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useStore } from '../store';
 import { formatShortDate } from '../utils/format';
+import { ScreenWrapper } from '../components/ScreenWrapper';
 
 const schema = z.object({
-    personName: z.string().min(1, 'Kişi adı gereklidir'),
+    personName: z.string().min(1, 'Kişi/Kurum adı gereklidir'),
     amount: z.string()
         .min(1, 'Tutar gereklidir')
         .transform((val) => val.replace(',', '.'))
@@ -26,9 +27,16 @@ export const AddDebtScreen = () => {
     const navigation = useNavigation();
     const { addDebt } = useStore();
 
-    const [type, setType] = useState<'debt' | 'receivable'>('receivable'); // receivable = Alacak, debt = Borç
-    const [dueDate, setDueDate] = useState(new Date());
+    const [type, setType] = useState<'debt' | 'receivable'>('debt');
+    const [dueDate, setDueDate] = useState<Date>(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [snackbarVisible, setSnackbarVisible] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+
+    const showToast = (message: string) => {
+        setSnackbarMessage(message);
+        setSnackbarVisible(true);
+    };
 
     const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<any>({
         resolver: zodResolver(schema),
@@ -45,31 +53,26 @@ export const AddDebtScreen = () => {
                 type,
                 personName: data.personName,
                 amount: data.amount,
-                dueDate: dueDate.toISOString(),
+                dueDate: dueDate.toISOString().split('T')[0],
                 isPaid: 0,
                 description: data.description,
             });
-            navigation.goBack();
+            showToast(`${type === 'debt' ? 'Borç' : 'Alacak'} başarıyla eklendi ✓`);
+            setTimeout(() => {
+                navigation.goBack();
+            }, 1000);
         } catch (error) {
             console.error(error);
-            Alert.alert('Hata', 'Kayıt eklenirken bir hata oluştu');
+            Alert.alert('Hata', 'Borç eklenirken bir hata oluştu');
         }
     };
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <ScreenWrapper>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-                <ScrollView contentContainerStyle={[styles.container, { backgroundColor: theme.colors.background }]}>
+                <ScrollView contentContainerStyle={styles.container}>
 
-                    <SegmentedButtons
-                        value={type}
-                        onValueChange={val => setType(val as any)}
-                        buttons={[
-                            { value: 'receivable', label: 'Alacak', style: { backgroundColor: type === 'receivable' ? (theme.colors as any).customIncome + '20' : undefined } },
-                            { value: 'debt', label: 'Borç', style: { backgroundColor: type === 'debt' ? (theme.colors as any).customExpense + '20' : undefined } },
-                        ]}
-                        style={styles.input}
-                    />
+                    <Text variant="headlineSmall" style={styles.title}>Borç Ekle</Text>
 
                     <Controller
                         control={control}
@@ -77,7 +80,7 @@ export const AddDebtScreen = () => {
                         render={({ field: { onChange, value } }) => (
                             <>
                                 <TextInput
-                                    label="Kişi Adı"
+                                    label="Borç Aldığım Kişi/Kurum"
                                     value={value}
                                     onChangeText={onChange}
                                     mode="outlined"
@@ -159,7 +162,19 @@ export const AddDebtScreen = () => {
 
                 </ScrollView>
             </KeyboardAvoidingView>
-        </SafeAreaView>
+
+            <Snackbar
+                visible={snackbarVisible}
+                onDismiss={() => setSnackbarVisible(false)}
+                duration={2000}
+                action={{
+                    label: 'Tamam',
+                    onPress: () => setSnackbarVisible(false),
+                }}
+            >
+                {snackbarMessage}
+            </Snackbar>
+        </ScreenWrapper>
     );
 };
 
@@ -167,6 +182,10 @@ const styles = StyleSheet.create({
     container: {
         padding: 16,
         flexGrow: 1,
+    },
+    title: {
+        marginBottom: 16,
+        fontWeight: 'bold',
     },
     input: {
         marginBottom: 8,

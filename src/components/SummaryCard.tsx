@@ -1,7 +1,6 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Text, useTheme, Icon } from 'react-native-paper';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Surface, Text, useTheme, Icon } from 'react-native-paper';
 import { formatCurrency } from '../utils/format';
 
 interface SummaryCardProps {
@@ -9,65 +8,86 @@ interface SummaryCardProps {
     amount: number;
     type: 'income' | 'expense' | 'balance';
     icon: string;
+    onPress?: () => void;
 }
 
-export const SummaryCard = ({ title, amount, type, icon }: SummaryCardProps) => {
+export const SummaryCard: React.FC<SummaryCardProps> = ({ title, amount, type, icon, onPress }) => {
     const theme = useTheme();
 
-    const getGradientColors = () => {
-        switch (type) {
-            case 'income': return ['rgba(46, 125, 50, 0.2)', 'rgba(0, 230, 118, 0.1)'];
-            case 'expense': return ['rgba(198, 40, 40, 0.2)', 'rgba(255, 23, 68, 0.1)'];
-            case 'balance': return ['rgba(101, 31, 255, 0.3)', 'rgba(101, 31, 255, 0.1)']; // Purple tint
-            default: return ['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)'];
-        }
+    const getColor = () => {
+        if (type === 'income') return (theme.colors as any).customIncome;
+        if (type === 'expense') return (theme.colors as any).customExpense;
+        return amount >= 0 ? (theme.colors as any).customIncome : (theme.colors as any).customExpense;
     };
 
-    const getIconColor = () => {
-        switch (type) {
-            case 'income': return '#00E676';
-            case 'expense': return '#FF1744';
-            default: return theme.colors.primary;
-        }
+    const color = getColor();
+
+    // Responsive font size based on amount length
+    const formattedAmount = formatCurrency(amount);
+    const getFontSize = () => {
+        if (formattedAmount.length > 15) return 16; // Very long
+        if (formattedAmount.length > 12) return 18; // Long
+        if (formattedAmount.length > 9) return 20;  // Medium
+        return 22; // Normal
     };
 
-    return (
-        <LinearGradient
-            colors={getGradientColors() as any}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.card, { borderColor: getIconColor() + '40' }]}
-        >
-            <View style={styles.content}>
-                <View style={[styles.iconContainer, { backgroundColor: getIconColor() + '20' }]}>
-                    <Icon source={icon} size={24} color={getIconColor()} />
-                </View>
-                <View>
-                    <Text variant="labelMedium" style={{ color: theme.colors.onSurfaceVariant }}>{title}</Text>
-                    <Text variant="titleMedium" style={{ color: theme.colors.onSurface, fontWeight: 'bold' }}>
-                        {formatCurrency(amount)}
-                    </Text>
+    const content = (
+        <Surface style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={2}>
+            <View style={styles.iconContainer}>
+                <View style={[styles.iconCircle, { backgroundColor: color + '20' }]}>
+                    <Icon source={icon} size={20} color={color} />
                 </View>
             </View>
-        </LinearGradient>
+            <Text variant="bodyMedium" style={[styles.title, { color: theme.colors.onSurfaceVariant }]}>
+                {title}
+            </Text>
+            <Text
+                style={[styles.amount, { color, fontSize: getFontSize() }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+            >
+                {formattedAmount}
+            </Text>
+        </Surface>
     );
+
+    if (onPress) {
+        return (
+            <TouchableOpacity onPress={onPress} style={{ flex: 1 }}>
+                {content}
+            </TouchableOpacity>
+        );
+    }
+
+    return content;
 };
 
 const styles = StyleSheet.create({
     card: {
         flex: 1,
-        margin: 6,
+        padding: 16,
         borderRadius: 16,
-        padding: 12,
-        borderWidth: 1,
-    },
-    content: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
+        marginHorizontal: 4,
+        minHeight: 120,
+        justifyContent: 'space-between',
     },
     iconContainer: {
-        padding: 8,
-        borderRadius: 8,
-    }
+        marginBottom: 8,
+    },
+    iconCircle: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    title: {
+        marginBottom: 4,
+        fontSize: 13,
+    },
+    amount: {
+        fontWeight: 'bold',
+        flexShrink: 1,
+    },
 });

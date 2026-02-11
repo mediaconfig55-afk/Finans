@@ -146,6 +146,14 @@ export const Repository = {
         return result;
     },
 
+    async getTotalDebt() {
+        const db = await getDB();
+        const result = await db.getFirstAsync<{ total: number }>(
+            'SELECT SUM(amount) as total FROM debts WHERE isPaid = 0 AND type = "debt"'
+        );
+        return result?.total ?? 0;
+    },
+
     async addReminder(reminder: Omit<Reminder, 'id'>) {
         const db = await getDB();
         await db.runAsync(
@@ -162,5 +170,44 @@ export const Repository = {
     async deleteReminder(id: number) {
         const db = await getDB();
         await db.runAsync('DELETE FROM reminders WHERE id = ?', [id]);
+    },
+
+    // Bulk operations for backup/restore
+    async clearAllData() {
+        const db = await getDB();
+        await db.runAsync('DELETE FROM transactions');
+        await db.runAsync('DELETE FROM debts');
+        await db.runAsync('DELETE FROM reminders');
+        await db.runAsync('DELETE FROM installments');
+    },
+
+    async bulkInsertTransactions(transactions: Omit<Transaction, 'id'>[]) {
+        const db = await getDB();
+        for (const t of transactions) {
+            await db.runAsync(
+                'INSERT INTO transactions (type, amount, category, date, description, installmentId) VALUES (?, ?, ?, ?, ?, ?)',
+                [t.type, t.amount, t.category, t.date, t.description ?? null, t.installmentId ?? null]
+            );
+        }
+    },
+
+    async bulkInsertDebts(debts: Omit<Debt, 'id'>[]) {
+        const db = await getDB();
+        for (const d of debts) {
+            await db.runAsync(
+                'INSERT INTO debts (type, personName, amount, dueDate, isPaid, description) VALUES (?, ?, ?, ?, ?, ?)',
+                [d.type, d.personName, d.amount, d.dueDate ?? null, d.isPaid, d.description ?? null]
+            );
+        }
+    },
+
+    async bulkInsertReminders(reminders: Omit<Reminder, 'id'>[]) {
+        const db = await getDB();
+        for (const r of reminders) {
+            await db.runAsync(
+                'INSERT INTO reminders (title, amount, dayOfMonth, type) VALUES (?, ?, ?, ?)',
+                [r.title, r.amount, r.dayOfMonth, r.type]
+            );
+        }
     }
 };
