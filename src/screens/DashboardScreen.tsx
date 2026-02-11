@@ -1,8 +1,9 @@
 import React, { useCallback } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
-import { Text, useTheme, FAB, List, Divider, IconButton, Surface } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import { Text, useTheme, FAB, List, Divider, IconButton, Surface, Avatar, Button, Icon } from 'react-native-paper';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SummaryCard } from '../components/SummaryCard';
 import { useStore } from '../store';
 import { formatCurrency, formatShortDate } from '../utils/format';
@@ -35,38 +36,52 @@ export const DashboardScreen = () => {
             >
                 {/* Header Section */}
                 <View style={styles.header}>
-                    <View>
-                        <Text variant="headlineMedium" style={styles.greeting}>Hoş Geldiniz 👋</Text>
-                        <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>
-                            Finansal Durumunuz
-                        </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Avatar.Image size={48} source={require('../../assets/icon.png')} style={{ backgroundColor: 'transparent' }} />
+                        <View style={{ marginLeft: 12 }}>
+                            <Text variant="titleMedium" style={{ color: theme.colors.onSurfaceVariant }}>Hoş geldin,</Text>
+                            <Text variant="headlineSmall" style={{ fontWeight: 'bold', color: theme.colors.primary }}>FİNANSIM</Text>
+                        </View>
                     </View>
                     <IconButton
                         icon="cog"
+                        iconColor={theme.colors.onSurface}
                         size={28}
                         onPress={() => (navigation as any).navigate('Settings')}
                     />
                 </View>
 
-                {/* Reminders Widget */}
-                <Surface style={[styles.reminderWidget, { backgroundColor: theme.colors.tertiaryContainer }]} elevation={2}>
-                    <View style={styles.reminderHeader}>
-                        <Text variant="titleMedium" style={{ color: theme.colors.onTertiaryContainer }}>🔔 Yaklaşan Ödemeler</Text>
-                        <IconButton
-                            icon="arrow-right"
-                            size={20}
-                            iconColor={theme.colors.onTertiaryContainer}
-                            onPress={() => (navigation as any).navigate('Reminders')}
-                        />
-                    </View>
-                    {reminders.slice(0, 2).map(r => (
-                        <View key={r.id} style={styles.reminderItem}>
-                            <Text style={{ color: theme.colors.onTertiaryContainer }}>{r.title} ({r.dayOfMonth}. gün)</Text>
-                            <Text style={{ fontWeight: 'bold', color: theme.colors.onTertiaryContainer }}>{formatCurrency(r.amount)}</Text>
+                {/* Reminders Widget - Glassmorphism */}
+                <LinearGradient
+                    colors={['rgba(101, 31, 255, 0.15)', 'rgba(101, 31, 255, 0.05)']}
+                    style={styles.widgetGradient}
+                >
+                    <View style={styles.widgetHeader}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Icon source="bell-ring" size={24} color={theme.colors.secondary} />
+                            <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.onSurface }}>Yaklaşan Ödemeler</Text>
                         </View>
-                    ))}
-                    {reminders.length === 0 && <Text style={{ color: theme.colors.onTertiaryContainer, opacity: 0.7 }}>Hatırlatıcı yok.</Text>}
-                </Surface>
+                        <Button mode="text" textColor={theme.colors.secondary} onPress={() => (navigation as any).navigate('Reminders')}>Tümü</Button>
+                    </View>
+
+                    {reminders.slice(0, 2).length === 0 ? (
+                        <Text style={{ color: theme.colors.onSurfaceVariant, fontStyle: 'italic' }}>Yaklaşan ödeme yok.</Text>
+                    ) : (
+                        reminders.slice(0, 2).map((item) => (
+                            <View key={item.id} style={styles.reminderItem}>
+                                <View style={styles.reminderDate}>
+                                    <Text style={{ fontWeight: 'bold', color: '#FFF', textAlign: 'center' }}>{item.dayOfMonth}</Text>
+                                    <Text style={{ fontSize: 10, color: '#FFF' }}>GÜN</Text>
+                                </View>
+                                <View style={{ flex: 1, marginLeft: 12 }}>
+                                    <Text variant="bodyLarge" style={{ fontWeight: 'bold', color: theme.colors.onSurface }}>{item.title}</Text>
+                                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>Her ayın {item.dayOfMonth}. günü</Text>
+                                </View>
+                                <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary }}>{formatCurrency(item.amount)}</Text>
+                            </View>
+                        ))
+                    )}
+                </LinearGradient>
 
                 {/* Summary Cards */}
                 <View style={styles.summaryRow}>
@@ -114,15 +129,17 @@ export const DashboardScreen = () => {
                     </Text>
                 </View>
 
-                <View style={[styles.listContainer, { backgroundColor: theme.colors.elevation.level1 }]}>
+                <Surface style={[styles.listContainer, { backgroundColor: theme.colors.elevation.level1 }]} elevation={1}>
                     {transactions.slice(0, 5).map((item, index) => (
                         <React.Fragment key={item.id}>
                             <List.Item
                                 title={item.category}
                                 description={item.description || formatShortDate(item.date)}
+                                titleStyle={{ fontWeight: 'bold', color: theme.colors.onSurface }}
+                                descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
                                 onPress={() => (navigation as any).navigate('TransactionDetail', { transaction: item })}
-                                left={props => <List.Icon {...props} icon={item.type === 'income' ? 'arrow-up' : 'arrow-down'} color={item.type === 'income' ? (theme.colors as any).customIncome : (theme.colors as any).customExpense} />}
-                                right={() => <Text style={{ alignSelf: 'center', color: item.type === 'income' ? (theme.colors as any).customIncome : (theme.colors as any).customExpense, fontWeight: 'bold' }}>{item.type === 'income' ? '+' : '-'}{formatCurrency(item.amount)}</Text>}
+                                left={props => <View style={{ justifyContent: 'center', marginLeft: 10 }}><Icon source={item.type === 'income' ? 'arrow-up' : 'arrow-down'} size={24} color={item.type === 'income' ? (theme.colors as any).customIncome : (theme.colors as any).customExpense} /></View>}
+                                right={() => <Text style={{ alignSelf: 'center', color: item.type === 'income' ? (theme.colors as any).customIncome : (theme.colors as any).customExpense, fontWeight: 'bold', marginRight: 10 }}>{item.type === 'income' ? '+' : '-'}{formatCurrency(item.amount)}</Text>}
                             />
                             {index < 4 && <Divider />}
                         </React.Fragment>
@@ -132,7 +149,7 @@ export const DashboardScreen = () => {
                             <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>Henüz işlem yok.</Text>
                         </View>
                     )}
-                </View>
+                </Surface>
 
             </ScrollView>
 
@@ -171,21 +188,40 @@ const styles = StyleSheet.create({
     balanceRow: {
         marginBottom: 16,
     },
-    reminderWidget: {
-        padding: 16,
+    fab: {
+        position: 'absolute',
+        margin: 16,
+        right: 0,
+        bottom: 0,
         borderRadius: 16,
-        marginBottom: 24,
     },
-    reminderHeader: {
+    widgetGradient: {
+        borderRadius: 20,
+        padding: 16,
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: 'rgba(101, 31, 255, 0.2)',
+    },
+    widgetHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: 12,
     },
     reminderItem: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 4,
+        alignItems: 'center',
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    },
+    reminderDate: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: '#651FFF', // Secondary/Purple
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     sectionHeader: {
         flexDirection: 'row',
@@ -196,11 +232,5 @@ const styles = StyleSheet.create({
     listContainer: {
         borderRadius: 12,
         overflow: 'hidden',
-    },
-    fab: {
-        position: 'absolute',
-        margin: 16,
-        right: 0,
-        bottom: 0,
     },
 });

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, FlatList, SafeAreaView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { List, Text, useTheme, Divider, Searchbar, Chip } from 'react-native-paper';
+import { List, Text, useTheme, Divider, Searchbar, Chip, Icon } from 'react-native-paper';
 import { useStore } from '../store';
 import { formatCurrency, formatShortDate } from '../utils/format';
 import { Transaction } from '../types';
@@ -29,7 +29,9 @@ export const TransactionsScreen = () => {
             title={item.category}
             description={item.description || formatShortDate(item.date)}
             onPress={() => (navigation as any).navigate('TransactionDetail', { transaction: item })}
-            left={props => <List.Icon {...props} icon={item.type === 'income' ? 'arrow-up' : 'arrow-down'} color={item.type === 'income' ? (theme.colors as any).customIncome : (theme.colors as any).customExpense} />}
+            titleStyle={{ fontWeight: 'bold', color: theme.colors.onSurface }}
+            descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
+            left={props => <View style={{ justifyContent: 'center', marginLeft: 10 }}><Icon source={item.type === 'income' ? 'arrow-up' : 'arrow-down'} size={24} color={item.type === 'income' ? (theme.colors as any).customIncome : (theme.colors as any).customExpense} /></View>}
             right={() =>
                 <View style={{ justifyContent: 'center', alignItems: 'flex-end' }}>
                     <Text style={{ color: item.type === 'income' ? (theme.colors as any).customIncome : (theme.colors as any).customExpense, fontWeight: 'bold' }}>

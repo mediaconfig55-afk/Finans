@@ -9,8 +9,8 @@ import Navigation from './src/navigation';
 import { registerForPushNotificationsAsync } from './src/utils/notifications';
 
 export default function App() {
-  const colorScheme = useColorScheme();
-  const theme = colorScheme === 'dark' ? AppDarkTheme : AppLightTheme;
+  const role = 'user'; // Placeholder
+  const theme = AppDarkTheme; // Enforcing Dark Neon Theme as requested
 
   useEffect(() => {
     initDatabase();

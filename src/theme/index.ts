@@ -28,11 +28,25 @@ export const AppDarkTheme = {
     ...MD3DarkTheme,
     colors: {
         ...MD3DarkTheme.colors,
-        primary: '#4DB6AC',
-        secondary: '#B2DFDB',
-        tertiary: '#FFCCBC',
+        primary: '#00E676', // Neon Green
+        onPrimary: '#000000',
+        secondary: '#651FFF', // Deep Purple
+        tertiary: '#2979FF', // Blue Accent
+        background: '#0A0E17', // Deep Dark Blue/Black
+        surface: '#111625', // Slightly lighter dark
+        surfaceVariant: '#1F293A',
         error: '#CF6679',
-        customIncome: '#81C784',
-        customExpense: '#E57373',
+        onSurface: '#FFFFFF',
+        onSurfaceVariant: '#B0BEC5',
+        customIncome: '#00E676', // Matching Primary
+        customExpense: '#FF1744', // Bright Red
+        elevation: {
+            level0: 'transparent',
+            level1: '#111625',
+            level2: '#1F293A',
+            level3: '#2C3A50',
+            level4: '#394B66',
+            level5: '#455C7C',
+        }
     },
 };

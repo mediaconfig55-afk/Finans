@@ -67,11 +67,13 @@ export const RemindersScreen = () => {
                             key={item.id}
                             title={item.title}
                             description={`Her ayın ${item.dayOfMonth}. günü`}
+                            titleStyle={{ fontWeight: 'bold', color: theme.colors.onSurface }}
+                            descriptionStyle={{ color: theme.colors.onSurfaceVariant }}
                             left={props => <List.Icon {...props} icon="calendar-clock" color={theme.colors.primary} />}
                             right={props => (
                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                    <Text style={{ fontWeight: 'bold', marginRight: 10 }}>{formatCurrency(item.amount)}</Text>
-                                    <Button icon="delete" compact onPress={() => handleDelete(item.id)}>Sil</Button>
+                                    <Text style={{ fontWeight: 'bold', marginRight: 10, color: theme.colors.onSurface }}>{formatCurrency(item.amount)}</Text>
+                                    <Button icon="delete" compact onPress={() => handleDelete(item.id)} textColor={theme.colors.error}>Sil</Button>
                                 </View>
                             )}
                         />
