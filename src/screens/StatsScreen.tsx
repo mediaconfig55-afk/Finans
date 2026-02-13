@@ -1,448 +1,232 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, Dimensions, Alert } from 'react-native';
-import { Text, useTheme, SegmentedButtons, Button, Divider, Snackbar } from 'react-native-paper';
-import { PieChart, BarChart } from 'react-native-gifted-charts';
+import React, { useState, useMemo } from 'react';
+import { View, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { Text, useTheme, Card, Avatar, ProgressBar } from 'react-native-paper';
+import { PieChart } from 'react-native-gifted-charts';
+import { useFocusEffect } from '@react-navigation/native';
 import { useStore } from '../store';
 import { formatCurrency } from '../utils/format';
-import { Transaction } from '../types';
 import { ScreenWrapper } from '../components/ScreenWrapper';
-import { exportToExcel, exportBackup, importBackup } from '../utils/export';
-import { Repository } from '../database/repository';
 import i18n from '../i18n';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const screenWidth = Dimensions.get('window').width;
 
 export const StatsScreen = () => {
     const theme = useTheme();
-    const { transactions, debts, reminders, fetchTransactions, fetchDebts, fetchReminders, refreshDashboard } = useStore();
-    const [chartMode, setChartMode] = useState<'category' | 'monthly' | 'daily'>('category');
-    const [selectedType, setSelectedType] = useState<'expense' | 'income'>('expense');
-    const [loading, setLoading] = useState(false);
-    const [snackbarVisible, setSnackbarVisible] = useState(false);
-    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const { transactions, kpi, refreshDashboard } = useStore();
 
-    useEffect(() => {
-        fetchTransactions();
-        fetchDebts();
-        fetchReminders();
-    }, []);
+    useFocusEffect(
+        React.useCallback(() => {
+            refreshDashboard();
+        }, [])
+    );
 
-    const showToast = (message: string) => {
-        setSnackbarMessage(message);
-        setSnackbarVisible(true);
-    };
+    const { totalIncome, totalExpense } = kpi;
+    const netBalance = totalIncome - totalExpense;
 
-    const handleExcelExport = async () => {
-        setLoading(true);
-        try {
-            await exportToExcel(transactions, debts);
-            showToast(i18n.t('exportSuccessMessage') + ' ✓');
-        } catch (error) {
-            Alert.alert(i18n.t('exportErrorTitle'), i18n.t('exportErrorMessage'));
-        } finally {
-            setLoading(false);
-        }
-    };
+    // --- Chart Data Preparation ---
+    const pieData = [
+        { value: totalIncome, color: '#4CAF50', text: '' },
+        { value: totalExpense, color: '#F44336', text: '' },
+    ];
 
-    const handleBackup = async () => {
-        setLoading(true);
-        try {
-            await exportBackup(transactions, debts, reminders);
-            showToast(i18n.t('backupSuccess'));
-        } catch (error) {
-            Alert.alert(i18n.t('error'), 'Yedek oluşturulurken bir hata oluştu.');
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Check if we have data
+    const hasData = totalIncome > 0 || totalExpense > 0;
 
-    const handleRestore = async () => {
-        Alert.alert(
-            i18n.t('restoreConfirmTitle'),
-            i18n.t('restoreConfirmMessage'),
-            [
-                { text: i18n.t('cancel'), style: 'cancel' },
-                {
-                    text: i18n.t('continue'),
-                    style: 'destructive',
-                    onPress: async () => {
-                        setLoading(true);
-                        try {
-                            const backupData = await importBackup();
-                            if (!backupData) {
-                                setLoading(false);
-                                return; // User cancelled
-                            }
+    // Top Expenses Category
+    const categorySpending = useMemo(() => {
+        const spending: Record<string, number> = {};
+        transactions
+            .filter(t => t.type === 'expense')
+            .forEach(t => {
+                spending[t.category] = (spending[t.category] || 0) + t.amount;
+            });
 
-                            // Clear all data
-                            await Repository.clearAllData();
+        return Object.entries(spending)
+            .sort((a, b) => b[1] - a[1]) // Sort by amount desc
+            .slice(0, 5) // Top 5
+            .map(([cat, amount]) => ({
+                category: cat,
+                amount,
+                color: theme.colors.primary,
+                percentage: totalExpense > 0 ? amount / totalExpense : 0
+            }));
+    }, [transactions, totalExpense]);
 
-                            // Insert backup data
-                            await Repository.bulkInsertTransactions(backupData.transactions);
-                            await Repository.bulkInsertDebts(backupData.debts);
-                            await Repository.bulkInsertReminders(backupData.reminders);
-
-                            // Refresh UI
-                            await refreshDashboard();
-                            await fetchTransactions();
-                            await fetchDebts();
-                            await fetchReminders();
-
-                            showToast(i18n.t('restoreSuccess'));
-                        } catch (error) {
-                            Alert.alert(i18n.t('error'), error instanceof Error ? error.message : 'Veriler geri yüklenirken bir hata oluştu.');
-                        } finally {
-                            setLoading(false);
-                        }
-                    }
-                }
-            ]
-        );
-    };
-
-    // --- Category Pie Chart Data ---
-    const filteredTransactions = transactions.filter(t => t.type === selectedType);
-    const categoryData = filteredTransactions.reduce((acc, curr) => {
-        acc[curr.category] = (acc[curr.category] || 0) + curr.amount;
-        return acc;
-    }, {} as Record<string, number>);
-
-    const pieData = Object.keys(categoryData).map((key, index) => ({
-        value: categoryData[key],
-        text: '',
-        color: getColor(index),
-        category: key,
-        amount: categoryData[key]
-    })).sort((a, b) => b.value - a.value);
-
-    // --- Monthly Bar Chart Data ---
-    // Group by "Month-Year" -> { income: 0, expense: 0 }
-    const monthlyData = transactions.reduce((acc, curr: Transaction) => { // Added type for curr
-        const date = new Date(curr.date);
-        if (isNaN(date.getTime())) return acc; // Geçersiz tarihleri atla
-
-        const key = `${date.getMonth() + 1}-${date.getFullYear()}`; // "2-2024"
-        if (!acc[key]) acc[key] = { income: 0, expense: 0, label: `${date.toLocaleString('tr-TR', { month: 'short' })}` };
-
-        if (curr.type === 'income') acc[key].income += curr.amount;
-        else acc[key].expense += curr.amount;
-
-        return acc;
-    }, {} as Record<string, { income: number, expense: number, label: string }>);
-
-    const barData = Object.keys(monthlyData).map(key => ([
-        {
-            value: monthlyData[key].income,
-            label: monthlyData[key].label,
-            spacing: 2,
-            labelWidth: 30,
-            labelTextStyle: { color: 'gray' },
-            frontColor: (theme.colors as any).customIncome,
-        },
-        {
-            value: monthlyData[key].expense,
-            frontColor: (theme.colors as any).customExpense,
-        }
-    ])).flat();
-
-    // --- Daily Bar Chart Data ---
-    const { dailySpending } = useStore();
-    const dailyBarData = dailySpending.map((d: { date: string, total: number }) => ({ // Added type for d
-        value: d.total,
-        label: formatShortDate(d.date),
-        frontColor: theme.colors.error,
-    })).reverse(); // Show oldest to newest in chart if needed, or keeping desc is fine but usually charts go left-right time. Let's reverse to show time progression.
-
-    // Helper to format date for daily chart
-    const formatShortDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return `${date.getDate()}/${date.getMonth() + 1}`;
-    };
-
-    // Helper to generate consistent colors
-    function getColor(index: number) {
-        const colors = [
-            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
-            '#C9CBCF', '#E7E9ED', '#76A346', '#2E7D32'
-        ];
-        return colors[index % colors.length];
-    }
-
-    const renderLegend = () => {
-        return pieData.map((item, index) => (
-            <View key={index} style={styles.legendItem}>
-                <View style={styles.legendRow}>
-                    <View style={[styles.legendColor, { backgroundColor: item.color }]} />
-                    <Text>{i18n.t(item.category)}</Text>
-                </View>
-                <Text style={{ fontWeight: 'bold', color: theme.colors.onSurface }}>{formatCurrency(item.amount)}</Text>
-            </View>
-        ));
-    };
 
     return (
         <ScreenWrapper>
-            <ScrollView contentContainerStyle={styles.content}>
-                <Text variant="headlineSmall" style={styles.title}>{i18n.t('analysis')}</Text>
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                <Text variant="headlineMedium" style={styles.headerTitle}>{i18n.t('financialStatus')}</Text>
 
-                <SegmentedButtons
-                    value={chartMode}
-                    onValueChange={(val: 'category' | 'monthly' | 'daily') => setChartMode(val)}
-                    buttons={[
-                        { value: 'category', label: i18n.t('category') },
-                        { value: 'monthly', label: i18n.t('monthly') },
-                        { value: 'daily', label: i18n.t('daily') },
-                    ]}
-                    style={styles.segment}
-                />
+                {/* Summary Cards Row */}
+                <View style={styles.summaryRow}>
+                    <Card style={[styles.summaryCard, { backgroundColor: '#E8F5E9' }]}>
+                        <Card.Content style={styles.cardContent}>
+                            <Avatar.Icon size={32} icon="arrow-down-circle" style={{ backgroundColor: '#4CAF50' }} />
+                            <Text variant="labelMedium" style={{ marginTop: 8, color: '#2E7D32' }}>{i18n.t('totalIncome')}</Text>
+                            <Text variant="titleMedium" style={{ fontWeight: 'bold', color: '#1B5E20' }}>
+                                {formatCurrency(totalIncome)}
+                            </Text>
+                        </Card.Content>
+                    </Card>
 
-                {chartMode === 'category' ? (
-                    <>
-                        <SegmentedButtons
-                            value={selectedType}
-                            onValueChange={(val: 'expense' | 'income') => setSelectedType(val)}
-                            buttons={[
-                                { value: 'expense', label: i18n.t('expenses'), icon: 'arrow-down', showSelectedCheck: true },
-                                { value: 'income', label: i18n.t('incomes'), icon: 'arrow-up', showSelectedCheck: true },
-                            ]}
-                            style={styles.typeSegment}
-                            density="small"
-                        />
+                    <Card style={[styles.summaryCard, { backgroundColor: '#FFEBEE' }]}>
+                        <Card.Content style={styles.cardContent}>
+                            <Avatar.Icon size={32} icon="arrow-up-circle" style={{ backgroundColor: '#F44336' }} />
+                            <Text variant="labelMedium" style={{ marginTop: 8, color: '#C62828' }}>{i18n.t('totalExpense')}</Text>
+                            <Text variant="titleMedium" style={{ fontWeight: 'bold', color: '#B71C1C' }}>
+                                {formatCurrency(totalExpense)}
+                            </Text>
+                        </Card.Content>
+                    </Card>
+                </View>
 
-                        {pieData.length > 0 ? (
-                            <View style={styles.chartContainer}>
-                                <PieChart
-                                    data={pieData}
-                                    donut
-                                    showText
-                                    textColor="black"
-                                    radius={120}
-                                    textSize={12}
-                                    focusOnPress
-                                    showValuesAsLabels={false}
-                                    showTextBackground
-                                    textBackgroundRadius={16}
-                                />
-                                <View style={styles.legendContainer}>
-                                    {renderLegend()}
+                {/* Balance Card */}
+                <Card style={[styles.balanceCard, { backgroundColor: theme.colors.primaryContainer }]}>
+                    <Card.Content>
+                        <View style={styles.rowBetween}>
+                            <View>
+                                <Text variant="titleMedium" style={{ color: theme.colors.onPrimaryContainer }}>{i18n.t('netBalance')}</Text>
+                                <Text variant="headlineMedium" style={{ fontWeight: 'bold', color: theme.colors.onPrimaryContainer }}>
+                                    {formatCurrency(netBalance)}
+                                </Text>
+                            </View>
+                            <MaterialCommunityIcons
+                                name={netBalance >= 0 ? "scale-balance" : "alert-circle-outline"}
+                                size={40}
+                                color={theme.colors.onPrimaryContainer}
+                            />
+                        </View>
+                    </Card.Content>
+                </Card>
+
+                {/* Charts Section */}
+                <View style={styles.sectionContainer}>
+                    <Text variant="titleLarge" style={styles.sectionTitle}>Gelir / Gider Dengesi</Text>
+                    {hasData ? (
+                        <View style={styles.chartWrapper}>
+                            <PieChart
+                                data={pieData}
+                                donut
+                                radius={80}
+                                innerRadius={60}
+                                centerLabelComponent={() => (
+                                    <View style={{ alignItems: 'center' }}>
+                                        <Text variant="labelSmall" style={{ color: 'gray' }}>Toplam</Text>
+                                        <Text variant="labelMedium" style={{ fontWeight: 'bold' }}>
+                                            {formatCurrency(totalIncome + totalExpense)}
+                                        </Text>
+                                    </View>
+                                )}
+                            />
+                            {/* Legend */}
+                            <View style={styles.legendContainer}>
+                                <View style={styles.legendItem}>
+                                    <View style={[styles.dot, { backgroundColor: '#4CAF50' }]} />
+                                    <Text variant="bodyMedium">{i18n.t('income')} ({totalIncome > 0 ? Math.round((totalIncome / (totalIncome + totalExpense) * 100)) : 0}%)</Text>
+                                </View>
+                                <View style={styles.legendItem}>
+                                    <View style={[styles.dot, { backgroundColor: '#F44336' }]} />
+                                    <Text variant="bodyMedium">{i18n.t('expense')} ({totalExpense > 0 ? Math.round((totalExpense / (totalIncome + totalExpense) * 100)) : 0}%)</Text>
                                 </View>
                             </View>
-                        ) : (
-                            <View style={styles.emptyContainer}>
-                                <Text>{i18n.t('noData')}</Text>
-                            </View>
-                        )}
-                    </>
-                ) : chartMode === 'monthly' ? (
-                    <View style={styles.chartContainer}>
-                        {barData.length > 0 ? (
-                            <BarChart
-                                data={barData}
-                                barWidth={22}
-                                spacing={24}
-                                roundedTop
-                                roundedBottom
-                                hideRules
-                                xAxisThickness={0}
-                                yAxisThickness={0}
-                                yAxisTextStyle={{ color: 'gray' }}
-                                noOfSections={3}
-                                maxValue={Math.max(...barData.map(d => d.value)) * 1.2 || 1000}
-                                width={screenWidth - 60}
-                            />
-                        ) : (
-                            <Text>{i18n.t('noData')}</Text>
-                        )}
-                        <View style={styles.chartLegendContainer}>
-                            <View style={styles.chartLegendItem}>
-                                <View style={[styles.chartLegendDot, { backgroundColor: (theme.colors as any).customIncome }]} />
-                                <Text>{i18n.t('income')}</Text>
-                            </View>
-                            <View style={styles.chartLegendItem}>
-                                <View style={[styles.chartLegendDot, { backgroundColor: (theme.colors as any).customExpense }]} />
-                                <Text>{i18n.t('expense')}</Text>
-                            </View>
                         </View>
-                    </View>
-                ) : (
-                    <View style={styles.chartContainer}>
-                        <Text variant="titleMedium" style={styles.marginBottom10}>{i18n.t('last30Days')}</Text>
-                        {dailyBarData.length > 0 ? (
-                            <BarChart
-                                data={dailyBarData}
-                                barWidth={22}
-                                spacing={24}
-                                roundedTop
-                                roundedBottom
-                                hideRules
-                                xAxisThickness={0}
-                                yAxisThickness={0}
-                                yAxisTextStyle={{ color: 'gray' }}
-                                noOfSections={3}
-                                maxValue={Math.max(...dailyBarData.map(d => d.value)) * 1.2 || 1000}
-                                width={screenWidth - 60}
-                                isAnimated
-                            />
-                        ) : (
-                            <Text>{i18n.t('noData')}</Text>
-                        )}
-                    </View>
-                )}
-
-                {/* Veri Yönetimi Bölümü */}
-                <Divider style={{ marginVertical: 24 }} />
-                <Text variant="titleLarge" style={styles.dataTitle}>
-                    {i18n.t('dataManagement')}
-                </Text>
-                <View style={styles.dataManagementContainer}>
-                    <Button
-                        mode="contained"
-                        icon="database-export"
-                        onPress={handleBackup}
-                        loading={loading}
-                        style={styles.dataButton}
-                        contentStyle={styles.buttonContent}
-                    >
-                        {i18n.t('createBackup')}
-                    </Button>
-                    <Text variant="bodySmall" style={[styles.description, { color: theme.colors.outline }]}>
-                        {i18n.t('createBackupDesc')}
-                    </Text>
-
-                    <Button
-                        mode="contained"
-                        icon="database-import"
-                        onPress={handleRestore}
-                        loading={loading}
-                        style={styles.dataButton}
-                        contentStyle={styles.buttonContent}
-                    >
-                        {i18n.t('restoreBackup')}
-                    </Button>
-                    <Text variant="bodySmall" style={[styles.description, { color: theme.colors.outline }]}>
-                        {i18n.t('restoreBackupDesc')}
-                    </Text>
-
-                    <Button
-                        mode="contained"
-                        icon="microsoft-excel"
-                        onPress={handleExcelExport}
-                        loading={loading}
-                        style={styles.dataButton}
-                        contentStyle={styles.buttonContent}
-                    >
-                        {i18n.t('exportExcel')}
-                    </Button>
-                    <Text variant="bodySmall" style={{ color: theme.colors.outline }}>
-                        {i18n.t('exportExcelDesc')}
-                    </Text>
+                    ) : (
+                        <Text style={{ textAlign: 'center', margin: 20, color: 'gray' }}>Henüz veri yok.</Text>
+                    )}
                 </View>
-            </ScrollView>
 
-            <Snackbar
-                visible={snackbarVisible}
-                onDismiss={() => setSnackbarVisible(false)}
-                duration={2000}
-                action={{
-                    label: 'Tamam',
-                    onPress: () => setSnackbarVisible(false),
-                }}
-            >
-                {snackbarMessage}
-            </Snackbar>
+                {/* Top Expenses List */}
+                <View style={styles.sectionContainer}>
+                    <Text variant="titleLarge" style={styles.sectionTitle}>En Çok Harcama Yaptığın Kategoriler</Text>
+                    {categorySpending.length > 0 ? (
+                        categorySpending.map((item, index) => (
+                            <View key={index} style={styles.categoryRow}>
+                                <View style={styles.categoryInfo}>
+                                    <Text variant="bodyLarge" style={{ fontWeight: '500' }}>{i18n.t(item.category)}</Text>
+                                    <Text variant="bodyMedium">{formatCurrency(item.amount)}</Text>
+                                </View>
+                                <ProgressBar progress={item.percentage} color={theme.colors.error} style={{ height: 6, borderRadius: 3 }} />
+                            </View>
+                        ))
+                    ) : (
+                        <Text style={{ padding: 16, color: 'gray' }}>Harcama verisi bulunamadı.</Text>
+                    )}
+                </View>
+
+            </ScrollView>
         </ScreenWrapper>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
     content: {
         padding: 16,
-        paddingBottom: 80,
+        paddingBottom: 100,
     },
-    scrollContent: {
-        padding: 16,
-        paddingBottom: 80,
-    },
-    title: {
-        marginBottom: 16,
+    headerTitle: {
         fontWeight: 'bold',
+        marginBottom: 16,
     },
-    segment: {
-        marginBottom: 24,
+    summaryRow: {
+        flexDirection: 'row',
+        gap: 12,
+        marginBottom: 12,
     },
-    chartContainer: {
-        alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.02)',
-        padding: 16,
+    summaryCard: {
+        flex: 1,
         borderRadius: 16,
     },
+    cardContent: {
+        alignItems: 'flex-start',
+        paddingVertical: 12,
+    },
+    balanceCard: {
+        marginBottom: 24,
+        borderRadius: 16,
+    },
+    rowBetween: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    sectionContainer: {
+        backgroundColor: 'rgba(0,0,0,0.02)',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 16,
+    },
+    sectionTitle: {
+        fontWeight: 'bold',
+        marginBottom: 16,
+        fontSize: 18,
+    },
+    chartWrapper: {
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+    },
     legendContainer: {
-        marginTop: 24,
-        width: '100%',
+        justifyContent: 'center',
     },
     legendItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 12,
-        justifyContent: 'space-between',
-        paddingHorizontal: 8,
-    },
-    legendColor: {
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-        marginRight: 8,
-    },
-    legendRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    typeSegment: {
-        marginBottom: 20,
-        width: '80%',
-        alignSelf: 'center',
-    },
-    chartLegendContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        marginTop: 20,
-        gap: 20,
-    },
-    chartLegendItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    chartLegendDot: {
-        width: 12,
-        height: 12,
-        marginRight: 8,
-        borderRadius: 6,
-    },
-    marginBottom10: {
-        marginBottom: 10,
-    },
-    dataTitle: {
-        fontWeight: 'bold',
-        marginBottom: 16,
-    },
-    buttonContent: {
-        paddingVertical: 8,
-    },
-    description: {
-        marginBottom: 16,
-    },
-    dataButton: {
         marginBottom: 8,
     },
-    emptyContainer: {
-        alignItems: 'center',
-        marginTop: 50,
-        padding: 20,
+    dot: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        marginRight: 8,
     },
-    dataManagementContainer: {
-        marginBottom: 32,
+    categoryRow: {
+        marginBottom: 16,
     },
+    categoryInfo: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 4,
+    }
 });

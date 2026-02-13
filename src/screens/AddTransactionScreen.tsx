@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
-import { TextInput, Button, SegmentedButtons, HelperText, useTheme, Switch, Text, Snackbar } from 'react-native-paper';
+import { TextInput, Button, SegmentedButtons, HelperText, useTheme, Switch, Text } from 'react-native-paper';
 import { useForm, Controller } from 'react-hook-form';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -10,6 +10,7 @@ import { useStore } from '../store';
 import { formatShortDate } from '../utils/format';
 import i18n from '../i18n';
 import { RootStackParamList } from '../navigation';
+import { useToast } from '../context/ToastContext';
 
 const schema = z.object({
     amount: z.string()
@@ -44,13 +45,9 @@ export const AddTransactionScreen = () => {
     const [type, setType] = useState<'income' | 'expense'>('expense');
     const [date, setDate] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
-    const [snackbarVisible, setSnackbarVisible] = useState(false);
-    const [snackbarMessage, setSnackbarMessage] = useState('');
 
-    const showToast = (message: string) => {
-        setSnackbarMessage(message);
-        setSnackbarVisible(true);
-    };
+    // Toast
+    const { showToast } = useToast();
 
     const { control, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
         resolver: zodResolver(schema),
@@ -89,10 +86,10 @@ export const AddTransactionScreen = () => {
                     date: date.toISOString(),
                     description: `${data.description || i18n.t('installment')} (1/${countVal})`,
                 });
-                showToast(i18n.t('saveSuccess', { type: i18n.t('installment') + ' ' + i18n.t('transactionDetail') })); // Adjusted for simplicity
+                showToast(i18n.t('saveSuccess', { type: i18n.t('installment') + ' ' + i18n.t('transactionDetail') }) + ' ✓', 'success');
                 setTimeout(() => {
                     navigation.goBack();
-                }, 1000);
+                }, 500);
 
             } else {
                 // Normal Transaction
@@ -104,14 +101,14 @@ export const AddTransactionScreen = () => {
                     description: data.description,
                     date: date.toISOString().split('T')[0],
                 });
-                showToast(i18n.t('saveSuccess', { type: i18n.t(type) }));
+                showToast(i18n.t('saveSuccess', { type: i18n.t(type) }) + ' ✓', 'success');
                 setTimeout(() => {
                     navigation.goBack();
-                }, 1000);
+                }, 500);
             }
         } catch (error) {
             console.error(error);
-            Alert.alert(i18n.t('error'), i18n.t('saveError'));
+            showToast(i18n.t('saveError'), 'error');
         }
     };
 
@@ -267,17 +264,7 @@ export const AddTransactionScreen = () => {
                 </ScrollView>
             </KeyboardAvoidingView>
 
-            <Snackbar
-                visible={snackbarVisible}
-                onDismiss={() => setSnackbarVisible(false)}
-                duration={2000}
-                action={{
-                    label: 'Tamam',
-                    onPress: () => setSnackbarVisible(false),
-                }}
-            >
-                {snackbarMessage}
-            </Snackbar>
+
         </SafeAreaView>
     );
 };

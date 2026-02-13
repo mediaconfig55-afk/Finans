@@ -1,10 +1,74 @@
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
-import { Platform } from 'react-native';
 import XLSX from 'xlsx';
 import { Transaction, Debt, Reminder } from '../types';
 import { formatShortDate } from './format';
+import { Platform } from 'react-native';
+
+// Type casting to avoid linter issues if types are missing in legacy
+const FS = FileSystem as any;
+const SAF = FS.StorageAccessFramework;
+
+// Helper to save file securely using SAF (Android) or Share (iOS)
+const saveFile = async (fileName: string, content: string, encoding: any, mimeType: string) => {
+    try {
+        if (Platform.OS === 'android') {
+            // 1. Try SAF first (User selects folder) - PREFERRED
+            let safSuccess = false;
+            if (SAF) {
+                try {
+                    const permissions = await SAF.requestDirectoryPermissionsAsync();
+                    if (permissions.granted) {
+                        const safariUri = permissions.directoryUri;
+                        // CORRECTED ARGUMENT ORDER: (parentUri, fileName, mimeType)
+                        const newFileUri = await SAF.createFileAsync(safariUri, fileName, mimeType);
+                        await FS.writeAsStringAsync(newFileUri, content, { encoding });
+                        safSuccess = true;
+                        return true;
+                    } else {
+                        throw new Error("Klasör seçimi iptal edildi.");
+                    }
+                } catch (e: any) {
+                    console.log("SAF Failed/Cancelled:", e);
+                    if (e.message.includes("iptal")) throw e; // Don't fallback on cancel
+                }
+            }
+
+            if (safSuccess) return true;
+
+            // 2. Fallback: Save to Cache -> Share (Works on most Androids as a standard "Open With/Save to")
+            // Only reach here if SAF was skipped or crashed (not cancelled)
+            const uri = FS.cacheDirectory + fileName;
+            await FS.writeAsStringAsync(uri, content, { encoding });
+
+            if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(uri, { mimeType, dialogTitle: 'Dosyayı Kaydet' });
+                return true;
+            }
+
+            throw new Error('Dosya kaydedilemedi ve paylaşılamadı.');
+
+        } else {
+            // iOS or fallback
+            if (!FS.cacheDirectory) {
+                throw new Error('Önbellek dizini bulunamadı.');
+            }
+
+            const uri = FS.cacheDirectory + fileName;
+            await FS.writeAsStringAsync(uri, content, { encoding });
+
+            if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(uri);
+                return true;
+            } else {
+                throw new Error('Paylaşım özelliği kullanılamıyor.');
+            }
+        }
+    } catch (error) {
+        throw error;
+    }
+};
 
 export const exportToExcel = async (transactions: Transaction[], debts: Debt[]) => {
     try {
@@ -35,48 +99,21 @@ export const exportToExcel = async (transactions: Transaction[], debts: Debt[]) 
         XLSX.utils.book_append_sheet(wb, wsDebts, "Borçlar");
 
         const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-        const uri = ((FileSystem as any).documentDirectory || (FileSystem as any).cacheDirectory) + 'finans_verileri.xlsx';
+        const fileName = `finans_rapor_${new Date().getTime()}.xlsx`;
 
-
-        await FileSystem.writeAsStringAsync(uri, wbout, {
-            encoding: (FileSystem as any).EncodingType.Base64
-        });
-
-        if (Platform.OS === 'android') {
-            const permissions = await (FileSystem as any).StorageAccessFramework.requestDirectoryPermissionsAsync();
-            if (permissions.granted) {
-                const base64Data = await FileSystem.readAsStringAsync(uri, { encoding: (FileSystem as any).EncodingType.Base64 });
-                await (FileSystem as any).StorageAccessFramework.createFileAsync(permissions.directoryUri, 'finans_verileri.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-                    .then(async (createdUri: string) => {
-                        await FileSystem.writeAsStringAsync(createdUri, base64Data, { encoding: (FileSystem as any).EncodingType.Base64 });
-                        alert('Dosya başarıyla kaydedildi: ' + createdUri);
-                    })
-                    .catch((e: any) => {
-                        console.log(e);
-                        alert('Dosya kaydedilemedi.');
-                    });
-            } else {
-                if (await Sharing.isAvailableAsync()) {
-                    await Sharing.shareAsync(uri);
-                } else {
-                    alert('Paylaşım özelliği bu cihazda kullanılamıyor.');
-                }
-            }
-        } else {
-            if (await Sharing.isAvailableAsync()) {
-                await Sharing.shareAsync(uri);
-            } else {
-                alert('Paylaşım özelliği bu cihazda kullanılamıyor.');
-            }
-        }
+        await saveFile(
+            fileName,
+            wbout,
+            'base64', // STRING LITERAL FIX
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
 
     } catch (error) {
-        console.error("Excel Export Error:", error);
-        alert('Dosya oluşturulurken bir hata oluştu.');
+        console.error("Excel Export Error Details:", error);
+        throw error;
     }
 };
 
-// Backup: Tüm verileri JSON olarak dışa aktar
 export const exportBackup = async (transactions: Transaction[], debts: Debt[], reminders: Reminder[]) => {
     try {
         const backupData = {
@@ -90,33 +127,25 @@ export const exportBackup = async (transactions: Transaction[], debts: Debt[], r
         };
 
         const jsonString = JSON.stringify(backupData, null, 2);
-        const uri = ((FileSystem as any).documentDirectory || (FileSystem as any).cacheDirectory) + `finans_yedek_${Date.now()}.json`;
+        const fileName = `finans_yedek_${new Date().getTime()}.json`;
 
-        await FileSystem.writeAsStringAsync(uri, jsonString, {
-            encoding: 'utf8' as any
-        });
+        await saveFile(
+            fileName,
+            jsonString,
+            'utf8', // STRING LITERAL FIX
+            'application/json'
+        );
 
-        if (await Sharing.isAvailableAsync()) {
-            await Sharing.shareAsync(uri, {
-                mimeType: 'application/json',
-                dialogTitle: 'Yedek Dosyasını Kaydet'
-            });
-            return true;
-        } else {
-            alert('Paylaşım özelliği bu cihazda kullanılamıyor.');
-            return false;
-        }
     } catch (error) {
-        console.error("Backup Error:", error);
-        throw new Error('Yedek oluşturulurken bir hata oluştu.');
+        console.error("Backup Error Details:", error);
+        throw error;
     }
 };
 
-// Restore: JSON dosyasından verileri içe aktar
 export const importBackup = async (): Promise<{ transactions: Transaction[], debts: Debt[], reminders: Reminder[] } | null> => {
     try {
         const result = await DocumentPicker.getDocumentAsync({
-            type: 'application/json',
+            type: '*/*',
             copyToCacheDirectory: true
         });
 
@@ -125,24 +154,28 @@ export const importBackup = async (): Promise<{ transactions: Transaction[], deb
         }
 
         const fileUri = result.assets[0].uri;
-        const fileContent = await FileSystem.readAsStringAsync(fileUri, {
-            encoding: 'utf8' as any
+        const fileContent = await FS.readAsStringAsync(fileUri, {
+            encoding: 'utf8' // STRING LITERAL FIX
         });
 
-        const backupData = JSON.parse(fileContent);
+        let backupData;
+        try {
+            backupData = JSON.parse(fileContent);
+        } catch (e) {
+            throw new Error('Dosya okunamadı. Geçerli bir JSON dosyası olduğundan emin olun.');
+        }
 
-        // Validate backup data structure
-        if (!backupData.data || !backupData.data.transactions || !backupData.data.debts || !backupData.data.reminders) {
-            throw new Error('Geçersiz yedek dosyası formatı.');
+        if (!backupData.data) {
+            throw new Error('Geçersiz yedek dosyası formatı (data eksik).');
         }
 
         return {
-            transactions: backupData.data.transactions,
-            debts: backupData.data.debts,
-            reminders: backupData.data.reminders
+            transactions: backupData.data.transactions || [],
+            debts: backupData.data.debts || [],
+            reminders: backupData.data.reminders || []
         };
     } catch (error) {
-        console.error("Restore Error:", error);
-        throw new Error('Yedek dosyası okunurken bir hata oluştu.');
+        console.error("Restore Error Details:", error);
+        throw error;
     }
 };

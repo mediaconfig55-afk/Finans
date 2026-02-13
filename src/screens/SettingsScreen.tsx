@@ -5,6 +5,8 @@ import { List, Switch, useTheme, Divider, ActivityIndicator, Text, Button } from
 import { useStore } from '../store';
 import { exportToExcel } from '../utils/export';
 import i18n from '../i18n';
+import * as Notifications from 'expo-notifications';
+import { useToast } from '../context/ToastContext';
 
 export const SettingsScreen = () => {
     const theme = useTheme();
@@ -17,6 +19,8 @@ export const SettingsScreen = () => {
     const setTheme = useStore((state) => state.setTheme);
     const [exporting, setExporting] = useState(false);
 
+    const { showToast } = useToast();
+
     const handleExport = async () => {
         setExporting(true);
         try {
@@ -28,12 +32,16 @@ export const SettingsScreen = () => {
             const state = useStore.getState();
             await exportToExcel(state.transactions, state.debts);
 
-            Alert.alert(i18n.t('exportSuccessTitle'), i18n.t('exportSuccessMessage'));
-        } catch (error) {
-            Alert.alert(i18n.t('exportErrorTitle'), i18n.t('exportErrorMessage'));
+            showToast(i18n.t('exportSuccessMessage'), 'success');
+        } catch (error: any) {
+            showToast(error.message || i18n.t('exportErrorMessage'), 'error');
         } finally {
             setExporting(false);
         }
+    };
+
+    const handleNotificationToggle = async (value: boolean) => {
+        // ... (lines 43-61 unchanged)
     };
 
     return (
@@ -43,15 +51,61 @@ export const SettingsScreen = () => {
                 <View style={styles.sectionPadding}>
                     <Button
                         mode="contained"
+                        accessibilityLabel="Excel Olarak İndir"
                         onPress={handleExport}
                         loading={exporting}
                         icon="microsoft-excel"
+                        style={styles.buttonSpacing}
                     >
                         {i18n.t('exportExcel')}
                     </Button>
                     <Text variant="bodySmall" style={[styles.description, { color: theme.colors.outline }]}>
                         {i18n.t('exportExcelDesc')}
                     </Text>
+
+                    <Divider style={{ marginVertical: 12 }} />
+
+                    <Button
+                        mode="contained"
+                        onPress={async () => {
+                            try {
+                                const state = useStore.getState();
+                                await import('../utils/export').then(m => m.exportBackup(state.transactions, state.debts, state.reminders));
+                                showToast(i18n.t('backupSuccess'), 'success');
+                            } catch (error: any) {
+                                showToast(error.message || 'Yedek oluşturma hatası', 'error');
+                            }
+                        }}
+                        icon="database-export"
+                        style={styles.buttonSpacing}
+                    >
+                        {i18n.t('createBackup')}
+                    </Button>
+
+                    <Button
+                        mode="contained"
+                        onPress={async () => {
+                            try {
+                                const m = await import('../utils/export');
+                                const data = await m.importBackup();
+                                if (data) {
+                                    const { Repository } = require('../database/repository');
+                                    await Repository.clearAllData();
+                                    await Repository.bulkInsertTransactions(data.transactions);
+                                    await Repository.bulkInsertDebts(data.debts);
+                                    await Repository.bulkInsertReminders(data.reminders);
+                                    useStore.getState().refreshDashboard();
+                                    showToast(i18n.t('restoreSuccess'), 'success');
+                                }
+                            } catch (error: any) {
+                                showToast(error.message || 'Geri yükleme hatası', 'error');
+                            }
+                        }}
+                        icon="database-import"
+                        style={styles.buttonSpacing}
+                    >
+                        {i18n.t('restoreBackup')}
+                    </Button>
                 </View>
             </List.Section>
             <Divider />
@@ -67,7 +121,7 @@ export const SettingsScreen = () => {
                 <List.Item
                     title={i18n.t('notifications')}
                     left={props => <List.Icon {...props} icon="bell" />}
-                    right={() => <Switch value={true} onValueChange={() => { }} disabled />}
+                    right={() => <Switch value={true} onValueChange={handleNotificationToggle} />}
                 />
             </List.Section>
 
@@ -80,7 +134,7 @@ export const SettingsScreen = () => {
                 />
             </List.Section>
 
-            <View style={styles.footer}>
+            <View style={[styles.footer, { paddingBottom: 20 + 50 }]}>
                 <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
                     {i18n.t('footerLove')}
                 </Text>
@@ -103,5 +157,9 @@ const styles = StyleSheet.create({
     },
     description: {
         marginTop: 8,
+        marginBottom: 8,
+    },
+    buttonSpacing: {
+        marginBottom: 8,
     }
 });

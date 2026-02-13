@@ -9,6 +9,7 @@ import { scheduleReminderNotification, cancelReminderNotifications } from '../ut
 import { ScreenWrapper } from '../components/ScreenWrapper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import i18n from '../i18n';
+import { useToast } from '../context/ToastContext';
 
 export const RemindersScreen = () => {
     const theme = useTheme();
@@ -24,6 +25,8 @@ export const RemindersScreen = () => {
     const [reminderTime, setReminderTime] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
+
+    const { showToast } = useToast();
 
     useEffect(() => {
         fetchReminders();
@@ -41,7 +44,7 @@ export const RemindersScreen = () => {
 
     const handleAdd = async () => {
         if (!title || !amount || !day) {
-            Alert.alert(i18n.t('warning'), i18n.t('fillAllFields'));
+            showToast(i18n.t('fillAllFields'), 'warning');
             return;
         }
 
@@ -57,27 +60,32 @@ export const RemindersScreen = () => {
             const newReminder = reminders[reminders.length - 1];
 
             if (newReminder) {
-                // Bildirim zamanını ayarla
+                // Notification date logic
                 const notificationDate = new Date(reminderDate);
                 notificationDate.setHours(reminderTime.getHours());
                 notificationDate.setMinutes(reminderTime.getMinutes());
+                notificationDate.setSeconds(0);
 
-                // Schedule notification
+                // If the user manually entered a day (e.g. 5) but picker says today (e.g. 15), 
+                // and they want it monthly on the 5th, the picker date should probably respect the manual day input if provided.
+                // However, the new logic schedules based on the PASSED date. 
+                // Let's assume the Date Picker is the source of truth for the START date.
+                // If 'day' input is different from 'notificationDate.getDate()', we should probably sync them or prioritize one.
+                // For now, we trust the 'notificationDate' fully as it has year/month/day/time.
+
                 await scheduleReminderNotification(
                     newReminder.id,
                     title,
-                    parseInt(day),
                     parseFloat(amount),
-                    reminderTime.getHours(),
-                    reminderTime.getMinutes()
+                    notificationDate
                 );
             }
 
             hideDialog();
-            Alert.alert(i18n.t('success'), `${i18n.t('reminderAdded')}\n📅 ${i18n.t('date')}: ${reminderDate.toLocaleDateString('tr-TR')}\n⏰ ${i18n.t('time', { defaultValue: 'Saat' })}: ${reminderTime.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`);
+            showToast(`${i18n.t('reminderAdded')}`, 'success');
         } catch (error) {
             console.error('Error adding reminder:', error);
-            Alert.alert(i18n.t('error'), i18n.t('reminderAddError'));
+            showToast(i18n.t('reminderAddError'), 'error');
         }
     };
 
@@ -94,6 +102,7 @@ export const RemindersScreen = () => {
                         await cancelReminderNotifications(id);
                         await deleteReminder(id);
                         fetchReminders();
+                        showToast(i18n.t('reminderDeleted'), 'success');
                     }
                 }
             ]

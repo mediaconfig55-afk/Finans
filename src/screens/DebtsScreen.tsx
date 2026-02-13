@@ -11,6 +11,7 @@ import { RootStackParamList } from '../navigation';
 import i18n from '../i18n';
 import { Portal, Dialog, Button, TextInput, ProgressBar } from 'react-native-paper';
 import { useState } from 'react';
+import { useToast } from '../context/ToastContext';
 
 export const DebtsScreen = () => {
     const theme = useTheme();
@@ -20,6 +21,8 @@ export const DebtsScreen = () => {
     const [visible, setVisible] = useState(false);
     const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
     const [paymentAmount, setPaymentAmount] = useState('');
+
+    const { showToast } = useToast();
 
     useEffect(() => {
         fetchDebts();
@@ -37,7 +40,7 @@ export const DebtsScreen = () => {
         if (!selectedDebt || !paymentAmount) return;
         const amount = parseFloat(paymentAmount.replace(',', '.'));
         if (isNaN(amount) || amount <= 0) {
-            alert(i18n.t('validAmountRequired'));
+            showToast(i18n.t('validAmountRequired'), 'error');
             return;
         }
 
@@ -50,6 +53,7 @@ export const DebtsScreen = () => {
             isPaid: isFullyPaid ? 1 : 0
         });
 
+        showToast(i18n.t('saveSuccess', { type: i18n.t('payment') }) + ' ✓', 'success');
         hideDialog();
     };
 

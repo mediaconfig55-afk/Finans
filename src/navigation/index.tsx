@@ -97,6 +97,7 @@ export default function Navigation() {
                 headerStyle: { backgroundColor: theme.colors.background },
                 headerTintColor: theme.colors.onBackground,
                 headerTitleStyle: { fontWeight: 'bold' },
+                animation: 'slide_from_right', // Default animation
             }}
         >
             <Stack.Screen
@@ -107,12 +108,20 @@ export default function Navigation() {
             <Stack.Screen
                 name="AddTransaction"
                 component={AddTransactionScreen}
-                options={{ title: 'Yeni İşlem', presentation: 'modal' }}
+                options={{
+                    title: 'Yeni İşlem',
+                    presentation: 'modal',
+                    animation: 'slide_from_bottom'
+                }}
             />
             <Stack.Screen
                 name="AddDebt"
                 component={AddDebtScreen}
-                options={{ title: 'Borç/Alacak Ekle', presentation: 'modal' }}
+                options={{
+                    title: 'Borç/Alacak Ekle',
+                    presentation: 'modal',
+                    animation: 'slide_from_bottom'
+                }}
             />
             <Stack.Screen
                 name="Settings"

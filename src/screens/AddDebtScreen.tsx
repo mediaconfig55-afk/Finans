@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { TextInput, Button, HelperText, useTheme, Text, Snackbar } from 'react-native-paper';
+import { TextInput, Button, HelperText, useTheme, Text, SegmentedButtons } from 'react-native-paper';
 import { useForm, Controller } from 'react-hook-form';
 import { useNavigation } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -10,6 +10,7 @@ import { useStore } from '../store';
 import { formatShortDate } from '../utils/format';
 import { ScreenWrapper } from '../components/ScreenWrapper';
 import i18n from '../i18n';
+import { useToast } from '../context/ToastContext';
 
 const schema = z.object({
     personName: z.string().min(1, i18n.t('personNameRequired')),
@@ -25,18 +26,14 @@ type FormData = z.infer<typeof schema>;
 export const AddDebtScreen = () => {
     const theme = useTheme();
     const navigation = useNavigation();
-    const { addDebt } = useStore();
+    const { addDebt, fetchDebts } = useStore();
 
     const [type, setType] = useState<'debt' | 'receivable'>('debt');
     const [dueDate, setDueDate] = useState<Date>(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
-    const [snackbarVisible, setSnackbarVisible] = useState(false);
-    const [snackbarMessage, setSnackbarMessage] = useState('');
 
-    const showToast = (message: string) => {
-        setSnackbarMessage(message);
-        setSnackbarVisible(true);
-    };
+    // Toast
+    const { showToast } = useToast();
 
     const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<any>({
         resolver: zodResolver(schema),
@@ -47,23 +44,25 @@ export const AddDebtScreen = () => {
         }
     });
 
-    const onSubmit = async (data: any) => {
+    const onSubmit = async (data: FormData) => {
         try {
             await addDebt({
                 type,
                 personName: data.personName,
-                amount: data.amount,
+                amount: parseFloat(data.amount.toString().replace(',', '.')),
                 dueDate: dueDate.toISOString().split('T')[0],
+                paidAmount: 0,
                 isPaid: 0,
                 description: data.description,
             });
-            showToast(i18n.t('saveSuccess', { type: type === 'debt' ? i18n.t('debt') : i18n.t('receivable') }) + ' ✓');
+            await fetchDebts();
+            showToast(i18n.t('saveSuccess', { type: type === 'debt' ? i18n.t('debt') : i18n.t('receivable') }) + ' ✓', 'success');
             setTimeout(() => {
                 navigation.goBack();
-            }, 1000);
+            }, 500);
         } catch (error) {
             console.error(error);
-            Alert.alert(i18n.t('error'), i18n.t('debtAddError'));
+            showToast(i18n.t('error'), 'error');
         }
     };
 
@@ -72,6 +71,16 @@ export const AddDebtScreen = () => {
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
                 <ScrollView contentContainerStyle={styles.container}>
                     <Text variant="headlineSmall" style={styles.title}>{i18n.t('addDebtAction')}</Text>
+
+                    <SegmentedButtons
+                        value={type}
+                        onValueChange={val => setType(val as 'debt' | 'receivable')}
+                        buttons={[
+                            { value: 'debt', label: i18n.t('debt') },
+                            { value: 'receivable', label: i18n.t('receivable') },
+                        ]}
+                        style={styles.input}
+                    />
 
                     <Controller
                         control={control}
@@ -161,18 +170,6 @@ export const AddDebtScreen = () => {
 
                 </ScrollView>
             </KeyboardAvoidingView>
-
-            <Snackbar
-                visible={snackbarVisible}
-                onDismiss={() => setSnackbarVisible(false)}
-                duration={2000}
-                action={{
-                    label: 'Tamam',
-                    onPress: () => setSnackbarVisible(false),
-                }}
-            >
-                {snackbarMessage}
-            </Snackbar>
         </ScreenWrapper>
     );
 };

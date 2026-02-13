@@ -15,49 +15,50 @@ Notifications.setNotificationHandler({
 export async function registerForPushNotificationsAsync() {
     if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
-            name: 'default',
+            name: 'Hatırlatıcılar',
             importance: Notifications.AndroidImportance.MAX,
             vibrationPattern: [0, 250, 250, 250],
             lightColor: '#FF231F7C',
+            sound: 'default'
         });
     }
 
     if (Device.isDevice) {
         const { status: existingStatus } = await Notifications.getPermissionsAsync();
         let finalStatus = existingStatus;
+
         if (existingStatus !== 'granted') {
             const { status } = await Notifications.requestPermissionsAsync();
             finalStatus = status;
         }
+
         if (finalStatus !== 'granted') {
-            // alert('Failed to get push token for push notification!');
+            console.log('Permission not granted!');
             return;
         }
-    } else {
-        // alert('Must use physical device for Push Notifications');
     }
 }
 
-export async function scheduleReminderNotification(reminderId: number, title: string, dayOfMonth: number, amount: number, hour: number, minute: number) {
+export async function scheduleReminderNotification(reminderId: number, title: string, amount: number, notificationDate: Date) {
     // Cancel existing notifications for this reminder
     try {
-        await Notifications.cancelScheduledNotificationAsync(`reminder_${reminderId}`);
+        await cancelReminderNotifications(reminderId);
     } catch (e) {
         // Ignore if doesn't exist
     }
 
-    // Schedule for next 12 months
-    const now = new Date();
-    const scheduledCount = 0;
+    // Schedule for next 12 months starting from selected date
+    const startMonth = notificationDate.getMonth();
+    const startYear = notificationDate.getFullYear();
+    const dayOfMonth = notificationDate.getDate();
+    const hour = notificationDate.getHours();
+    const minute = notificationDate.getMinutes();
 
     for (let i = 0; i < 12; i++) {
-        const triggerDate = new Date();
-        triggerDate.setMonth(now.getMonth() + i);
-        triggerDate.setDate(dayOfMonth);
-        triggerDate.setHours(hour, minute, 0, 0);
+        const triggerDate = new Date(startYear, startMonth + i, dayOfMonth, hour, minute, 0, 0);
 
         // Skip if in the past
-        if (triggerDate <= now) continue;
+        if (triggerDate.getTime() <= Date.now()) continue;
 
         try {
             await Notifications.scheduleNotificationAsync({
@@ -66,16 +67,19 @@ export async function scheduleReminderNotification(reminderId: number, title: st
                     title: "Fatura Hatırlatıcı 🔔",
                     body: `${title} için ödeme zamanı! Tutar: ${amount}₺`,
                     sound: true,
-                    data: { reminderId, month: i },
+                    data: { reminderId, index: i },
                 },
-                trigger: { type: 'date', date: triggerDate } as any,
+                trigger: {
+                    type: 'date',
+                    date: triggerDate
+                } as any,
             });
         } catch (error) {
             console.error('Error scheduling notification:', error);
         }
     }
 
-    return now;
+    return notificationDate;
 }
 
 export async function cancelReminderNotifications(reminderId: number) {

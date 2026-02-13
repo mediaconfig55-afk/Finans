@@ -2,7 +2,6 @@ import React, { useState, useRef } from 'react';
 import { View, StyleSheet, FlatList, Dimensions, TouchableOpacity } from 'react-native';
 import { Text, Button, useTheme, Portal, Dialog, TextInput, Icon } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Animatable from 'react-native-animatable';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { registerForPushNotificationsAsync } from '../utils/notifications';
 import { useStore } from '../store';
@@ -115,27 +114,19 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
 
     const renderSlide = ({ item }: { item: Slide }) => (
         <View style={[styles.slide, { width }]}>
-            <Animatable.View animation={item.animation} duration={800} style={styles.iconContainer}>
+            <View style={styles.iconContainer}>
                 <Icon
                     source={item.icon}
                     size={120}
                     color={theme.colors.primary}
                 />
-            </Animatable.View>
-            <Animatable.Text
-                animation="fadeIn"
-                delay={400}
-                style={[styles.title, { color: theme.colors.onBackground }]}
-            >
+            </View>
+            <Text style={[styles.title, { color: theme.colors.onBackground }]}>
                 {item.title}
-            </Animatable.Text>
-            <Animatable.Text
-                animation="fadeIn"
-                delay={600}
-                style={[styles.description, { color: theme.colors.onSurfaceVariant }]}
-            >
+            </Text>
+            <Text style={[styles.description, { color: theme.colors.onSurfaceVariant }]}>
                 {item.description}
-            </Animatable.Text>
+            </Text>
         </View>
     );
 
@@ -196,72 +187,68 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
             {/* Permission Dialog */}
             <Portal>
                 <Dialog visible={showPermissionDialog} dismissable={false}>
-                    <Animatable.View animation="bounceIn" duration={600}>
-                        <Dialog.Icon icon="bell-ring" size={60} />
-                        <Dialog.Title style={{ textAlign: 'center' }}>Bildirim İzni</Dialog.Title>
-                        <Dialog.Content>
-                            <Text style={{ textAlign: 'center' }}>
-                                Fatura hatırlatıcıları için bildirim iznine ihtiyacımız var.
-                            </Text>
-                        </Dialog.Content>
-                        <Dialog.Actions>
-                            <Button onPress={handlePermissionSkip}>Daha Sonra</Button>
-                            <Button mode="contained" onPress={handlePermissionGrant}>İzin Ver</Button>
-                        </Dialog.Actions>
-                    </Animatable.View>
+                    <Dialog.Icon icon="bell-ring" size={60} />
+                    <Dialog.Title style={{ textAlign: 'center' }}>Bildirim İzni</Dialog.Title>
+                    <Dialog.Content>
+                        <Text style={{ textAlign: 'center' }}>
+                            Fatura hatırlatıcıları için bildirim iznine ihtiyacımız var.
+                        </Text>
+                    </Dialog.Content>
+                    <Dialog.Actions>
+                        <Button onPress={handlePermissionSkip}>Daha Sonra</Button>
+                        <Button mode="contained" onPress={handlePermissionGrant}>İzin Ver</Button>
+                    </Dialog.Actions>
                 </Dialog>
             </Portal>
 
             {/* Thank You Dialog */}
             <Portal>
                 <Dialog visible={showThankYou} dismissable={false}>
-                    <Animatable.View animation="zoomIn" duration={400} style={{ alignItems: 'center', padding: 20 }}>
+                    <View style={{ alignItems: 'center', padding: 20 }}>
                         <Icon source="check-circle" size={80} color={theme.colors.primary} />
                         <Text variant="headlineSmall" style={{ marginTop: 16, fontWeight: 'bold' }}>
                             Teşekkürler! 🎉
                         </Text>
-                    </Animatable.View>
+                    </View>
                 </Dialog>
             </Portal>
 
             {/* Name Input Dialog */}
             <Portal>
                 <Dialog visible={showNameDialog} dismissable={false}>
-                    <Animatable.View animation="bounceIn">
-                        <Dialog.Icon icon="account" size={60} />
-                        <Dialog.Title style={{ textAlign: 'center' }}>Sizi Tanıyalım</Dialog.Title>
-                        <Dialog.Content>
-                            <TextInput
-                                label="Adınız"
-                                value={name}
-                                onChangeText={setName}
-                                mode="outlined"
-                                autoFocus
-                                placeholder="Adınızı girin"
-                            />
-                        </Dialog.Content>
-                        <Dialog.Actions>
-                            <Button
-                                mode="contained"
-                                onPress={handleStartApp}
-                                disabled={name.trim().length < 2}
-                            >
-                                Başla
-                            </Button>
-                        </Dialog.Actions>
-                    </Animatable.View>
+                    <Dialog.Icon icon="account" size={60} />
+                    <Dialog.Title style={{ textAlign: 'center' }}>Sizi Tanıyalım</Dialog.Title>
+                    <Dialog.Content>
+                        <TextInput
+                            label="Adınız"
+                            value={name}
+                            onChangeText={setName}
+                            mode="outlined"
+                            autoFocus
+                            placeholder="Adınızı girin"
+                        />
+                    </Dialog.Content>
+                    <Dialog.Actions>
+                        <Button
+                            mode="contained"
+                            onPress={handleStartApp}
+                            disabled={name.trim().length < 2}
+                        >
+                            Başla
+                        </Button>
+                    </Dialog.Actions>
                 </Dialog>
             </Portal>
 
             {/* Welcome Dialog */}
             <Portal>
                 <Dialog visible={showWelcome} dismissable={false}>
-                    <Animatable.View animation="pulse" iterationCount={2} style={{ alignItems: 'center', padding: 20 }}>
+                    <View style={{ alignItems: 'center', padding: 20 }}>
                         <Icon source="hand-wave" size={80} color={theme.colors.primary} />
                         <Text variant="headlineSmall" style={{ marginTop: 16, fontWeight: 'bold', textAlign: 'center' }}>
                             Hoş geldin, {name}! 👋
                         </Text>
-                    </Animatable.View>
+                    </View>
                 </Dialog>
             </Portal>
         </SafeAreaView>

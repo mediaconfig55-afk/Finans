@@ -118,13 +118,14 @@ export const Repository = {
         const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString().split('T')[0];
         const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0];
 
+        // Use date(date) to ignore time component when comparing
         const incomeResult = await db.getFirstAsync<{ total: number }>(
-            `SELECT SUM(amount) as total FROM transactions WHERE type = 'income' AND date BETWEEN ? AND ?`,
+            `SELECT SUM(amount) as total FROM transactions WHERE type = 'income' AND date(date) BETWEEN ? AND ?`,
             [startOfMonth, endOfMonth]
         );
 
         const expenseResult = await db.getFirstAsync<{ total: number }>(
-            `SELECT SUM(amount) as total FROM transactions WHERE type = 'expense' AND date BETWEEN ? AND ?`,
+            `SELECT SUM(amount) as total FROM transactions WHERE type = 'expense' AND date(date) BETWEEN ? AND ?`,
             [startOfMonth, endOfMonth]
         );
 

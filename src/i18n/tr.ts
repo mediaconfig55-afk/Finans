@@ -115,6 +115,12 @@ export default {
     continue: 'Devam Et',
     restoreSuccess: 'Veriler başarıyla geri yüklendi ✓',
     backupSuccess: 'Yedek başarıyla oluşturuldu ✓',
+    financialStatus: 'Finansal Durum',
+    totalIncome: 'Toplam Gelir',
+    totalExpense: 'Toplam Gider',
+    totalDebt: 'Toplam Borç',
+    payment: 'Ödeme',
+    info: 'Bilgi',
 
     // Debts
     myDebts: 'Borçlarım',
@@ -148,6 +154,7 @@ export default {
     deleteReminderTitle: 'Hatırlatıcıyı Sil',
     deleteReminderMessage: 'Bu hatırlatıcıyı silmek istediğinizden emin misiniz?',
     reminderAdded: 'Hatırlatıcı eklendi!',
+    reminderDeleted: 'Hatırlatıcı silindi',
     reminderAddError: 'Hatırlatıcı eklenirken bir hata oluştu.',
     warning: 'Uyarı',
     fillAllFields: 'Lütfen tüm alanları doldurun.',
@@ -161,4 +168,8 @@ export default {
     deleteTransactionMessage: 'Bu işlemi silmek istediğinizden emin misiniz?',
     noDescription: 'Açıklama yok',
     deleteTransaction: 'İşlemi Sil',
+    transactionDeleted: 'İşlem silindi',
+
+    // Notifications
+    notificationPermissionError: 'Bildirim izni verilmedi',
 };

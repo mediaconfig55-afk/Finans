@@ -1,17 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, SectionList, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { List, Text, useTheme, Divider, Searchbar, Chip, Icon, Surface } from 'react-native-paper';
+import { Text, useTheme, Searchbar, Chip, Icon, Surface } from 'react-native-paper';
+import { Swipeable } from 'react-native-gesture-handler';
 import { useStore } from '../store';
 import { formatCurrency, formatShortDate } from '../utils/format';
 import { Transaction } from '../types';
 import { ScreenWrapper } from '../components/ScreenWrapper';
+import { groupTransactionsByDate } from '../utils/dateGrouping';
+import { hapticLight, hapticSuccess, hapticError } from '../utils/haptics';
 import i18n from '../i18n';
 
 export const TransactionsScreen = () => {
     const theme = useTheme();
     const navigation = useNavigation();
-    const { transactions, debts, fetchTransactions, fetchDebts } = useStore();
+    const { transactions, debts, fetchTransactions, fetchDebts, deleteTransaction } = useStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState<'all' | 'income' | 'expense' | 'debt'>('all');
 
@@ -40,6 +43,61 @@ export const TransactionsScreen = () => {
         return matchesSearch && matchesType;
     });
 
+    // Group all filtered data (transactions + debts)
+    const groupedData = groupTransactionsByDate(filteredData);
+
+    const handleDelete = (item: any) => {
+        hapticLight();
+        Alert.alert(
+            i18n.t('delete'),
+            i18n.t('deleteTransactionMessage'),
+            [
+                { text: i18n.t('cancel'), style: 'cancel' },
+                {
+                    text: i18n.t('delete'),
+                    style: 'destructive',
+                    onPress: async () => {
+                        if (item.type !== 'debt') {
+                            await deleteTransaction(item.id);
+                            hapticSuccess();
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleEdit = (item: any) => {
+        hapticLight();
+        if (item.type !== 'debt') {
+            (navigation as any).navigate('TransactionDetail', { transaction: item });
+        }
+    };
+
+    const renderRightActions = (item: any) => (
+        <View style={styles.swipeActions}>
+            <TouchableOpacity
+                style={[styles.swipeButton, { backgroundColor: theme.colors.error }]}
+                onPress={() => handleDelete(item)}
+            >
+                <Icon source="delete" size={24} color="#FFF" />
+                <Text style={styles.swipeText}>Sil</Text>
+            </TouchableOpacity>
+        </View>
+    );
+
+    const renderLeftActions = (item: any) => (
+        <View style={styles.swipeActions}>
+            <TouchableOpacity
+                style={[styles.swipeButton, { backgroundColor: theme.colors.primary }]}
+                onPress={() => handleEdit(item)}
+            >
+                <Icon source="pencil" size={24} color="#FFF" />
+                <Text style={styles.swipeText}>Düzenle</Text>
+            </TouchableOpacity>
+        </View>
+    );
+
     const renderItem = ({ item }: { item: any }) => {
         const isIncome = item.type === 'income';
         const isExpense = item.type === 'expense';
@@ -48,36 +106,46 @@ export const TransactionsScreen = () => {
         const icon = isIncome ? 'arrow-up' : isExpense ? 'arrow-down' : 'alert-circle';
 
         return (
-            <Surface style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={2}>
-                <TouchableOpacity
-                    onPress={() => item.type !== 'debt' && (navigation as any).navigate('TransactionDetail', { transaction: item })}
-                    style={styles.cardContent}
-                >
-                    <View style={styles.cardHeader}>
-                        <View style={[styles.iconContainer, { backgroundColor: color + '20' }]}>
-                            <Icon source={icon} size={24} color={color} />
-                        </View>
-                        <View style={styles.cardInfo}>
-                            <Text variant="titleMedium" style={styles.categoryText}>
-                                {i18n.t(item.category, { defaultValue: item.category })}
-                            </Text>
-                            {item.description && (
-                                <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                                    {item.description}
+            <Swipeable
+                renderRightActions={() => renderRightActions(item)}
+                renderLeftActions={() => renderLeftActions(item)}
+                overshootRight={false}
+                overshootLeft={false}
+            >
+                <Surface style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={2}>
+                    <TouchableOpacity
+                        onPress={() => {
+                            hapticLight();
+                            item.type !== 'debt' && (navigation as any).navigate('TransactionDetail', { transaction: item });
+                        }}
+                        style={styles.cardContent}
+                    >
+                        <View style={styles.cardHeader}>
+                            <View style={[styles.iconContainer, { backgroundColor: color + '20' }]}>
+                                <Icon source={icon} size={24} color={color} />
+                            </View>
+                            <View style={styles.cardInfo}>
+                                <Text variant="titleMedium" style={styles.categoryText}>
+                                    {i18n.t(item.category, { defaultValue: item.category })}
                                 </Text>
-                            )}
+                                {item.description && (
+                                    <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                                        {item.description}
+                                    </Text>
+                                )}
+                            </View>
                         </View>
-                    </View>
-                    <View style={styles.cardFooter}>
-                        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                            {formatShortDate(item.date)}
-                        </Text>
-                        <Text variant="titleMedium" style={{ color: color, fontWeight: 'bold' }}>
-                            {item.type === 'income' ? '+' : '-'}{formatCurrency(item.amount)}
-                        </Text>
-                    </View>
-                </TouchableOpacity>
-            </Surface>
+                        <View style={styles.cardFooter}>
+                            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                                {formatShortDate(item.date)}
+                            </Text>
+                            <Text variant="titleMedium" style={{ color: color, fontWeight: 'bold' }}>
+                                {item.type === 'income' ? '+' : '-'}{formatCurrency(item.amount)}
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
+                </Surface>
+            </Swipeable>
         );
     };
 
@@ -93,7 +161,7 @@ export const TransactionsScreen = () => {
                 <View style={styles.chips}>
                     <Chip
                         selected={filterType === 'all'}
-                        onPress={() => setFilterType('all')}
+                        onPress={() => { hapticLight(); setFilterType('all'); }}
                         showSelectedOverlay
                         style={styles.chip}
                     >
@@ -101,7 +169,7 @@ export const TransactionsScreen = () => {
                     </Chip>
                     <Chip
                         selected={filterType === 'income'}
-                        onPress={() => setFilterType('income')}
+                        onPress={() => { hapticLight(); setFilterType('income'); }}
                         showSelectedOverlay
                         style={styles.chip}
                     >
@@ -109,7 +177,7 @@ export const TransactionsScreen = () => {
                     </Chip>
                     <Chip
                         selected={filterType === 'expense'}
-                        onPress={() => setFilterType('expense')}
+                        onPress={() => { hapticLight(); setFilterType('expense'); }}
                         showSelectedOverlay
                         style={styles.chip}
                     >
@@ -117,7 +185,7 @@ export const TransactionsScreen = () => {
                     </Chip>
                     <Chip
                         selected={filterType === 'debt'}
-                        onPress={() => setFilterType('debt')}
+                        onPress={() => { hapticLight(); setFilterType('debt'); }}
                         showSelectedOverlay
                         style={styles.chip}
                     >
@@ -126,11 +194,19 @@ export const TransactionsScreen = () => {
                 </View>
             </View>
 
-            <FlatList
-                data={filteredData}
-                keyExtractor={item => `${item.type}-${item.id}`}
+            <SectionList
+                sections={groupedData}
+                keyExtractor={(item, index) => `${item.type}-${item.id}-${index}`}
                 renderItem={renderItem}
+                renderSectionHeader={({ section: { title } }) => (
+                    <View style={[styles.sectionHeader, { backgroundColor: theme.colors.background }]}>
+                        <Text variant="titleSmall" style={{ color: theme.colors.primary, fontWeight: 'bold' }}>
+                            {title}
+                        </Text>
+                    </View>
+                )}
                 contentContainerStyle={styles.listContent}
+                stickySectionHeadersEnabled={true}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
                         <Text>{i18n.t('noTransactionsFound')}</Text>
@@ -158,6 +234,12 @@ const styles = StyleSheet.create({
     },
     chip: {
         marginRight: 8,
+    },
+    sectionHeader: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(0,0,0,0.05)',
     },
     listContent: {
         padding: 16,
@@ -198,5 +280,21 @@ const styles = StyleSheet.create({
     emptyContainer: {
         padding: 40,
         alignItems: 'center',
-    }
+    },
+    swipeActions: {
+        flexDirection: 'row',
+        alignItems: 'stretch',
+    },
+    swipeButton: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: 80,
+        paddingHorizontal: 12,
+    },
+    swipeText: {
+        color: '#FFF',
+        fontSize: 12,
+        marginTop: 4,
+        fontWeight: '600',
+    },
 });

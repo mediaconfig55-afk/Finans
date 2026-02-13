@@ -10,6 +10,7 @@ import { useStore } from '../store';
 import { formatShortDate } from '../utils/format';
 import { Transaction } from '../types';
 import i18n from '../i18n';
+import { useToast } from '../context/ToastContext';
 
 const schema = z.object({
     amount: z.string().min(1, i18n.t('amountRequired')).transform((val) => parseFloat(val.replace(',', '.'))).refine((val) => !isNaN(val) && val > 0, i18n.t('validAmountRequired')),
@@ -56,6 +57,9 @@ export const TransactionDetailScreen = () => {
         });
     }, [navigation, isEditing]);
 
+    // Toast
+    const { showToast } = useToast();
+
     const onSubmit = async (data: any) => {
         try {
             await updateTransaction({
@@ -66,12 +70,12 @@ export const TransactionDetailScreen = () => {
                 date: date.toISOString(),
                 description: data.description,
             });
-            Alert.alert(i18n.t('success'), i18n.t('transactionUpdated'));
+            showToast(i18n.t('transactionUpdated'), 'success');
             setIsEditing(false);
             navigation.goBack();
         } catch (error) {
             console.error(error);
-            Alert.alert(i18n.t('error'), i18n.t('updateError'));
+            showToast(i18n.t('updateError'), 'error');
         }
     };
 
@@ -86,6 +90,7 @@ export const TransactionDetailScreen = () => {
                     style: 'destructive',
                     onPress: async () => {
                         await deleteTransaction(transaction.id);
+                        showToast(i18n.t('transactionDeleted'), 'success');
                         navigation.goBack();
                     }
                 }
