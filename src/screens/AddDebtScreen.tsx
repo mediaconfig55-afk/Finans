@@ -35,7 +35,7 @@ export const AddDebtScreen = () => {
     // Toast
     const { showToast } = useToast();
 
-    const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<any>({
+    const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
         resolver: zodResolver(schema),
         defaultValues: {
             personName: '',

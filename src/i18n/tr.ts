@@ -172,4 +172,22 @@ export default {
 
     // Notifications
     notificationPermissionError: 'Bildirim izni verilmedi',
+
+    // Missing keys used in SettingsScreen
+    restoreConfirm: 'Mevcut tüm veriler silinip yedek dosyasındaki veriler yüklenecek. Devam etmek istiyor musunuz?',
+    yes: 'Evet',
+
+    // Statistics
+    statistics: 'İstatistik',
+    ratio: 'Oran',
+    dailyAverage: 'Günlük Ort.',
+    spending: 'Harcama',
+
+    // Notifications
+    notificationTitle: 'Fatura Hatırlatıcı 🔔',
+    notificationBody: '%{title} için ödeme zamanı! Tutar: %{amount}₺',
+
+    // Validation
+    invalidDay: 'Gün 1-31 arasında olmalıdır',
+    setReminder: 'Hatırlatıcı Kur',
 };

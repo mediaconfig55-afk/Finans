@@ -190,10 +190,12 @@ export const Repository = {
     // Bulk operations for backup/restore
     async clearAllData() {
         const db = await getDB();
-        await db.runAsync('DELETE FROM transactions');
-        await db.runAsync('DELETE FROM debts');
-        await db.runAsync('DELETE FROM reminders');
-        await db.runAsync('DELETE FROM installments');
+        await db.withTransactionAsync(async () => {
+            await db.runAsync('DELETE FROM transactions');
+            await db.runAsync('DELETE FROM debts');
+            await db.runAsync('DELETE FROM reminders');
+            await db.runAsync('DELETE FROM installments');
+        });
     },
 
     async bulkInsertTransactions(transactions: Transaction[]) {

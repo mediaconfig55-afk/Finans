@@ -154,11 +154,11 @@ export const DebtsScreen = () => {
                 icon="plus"
                 label={i18n.t('addDebtAction')}
                 style={[styles.fab, {
-                    bottom: (insets.bottom || 16) + 85, // Sit just above tab bar
+                    bottom: (insets.bottom || 20) + 85, // Sit just above tab bar
                     backgroundColor: theme.colors.primary
                 }]}
                 color={theme.colors.onPrimary}
-                onPress={() => navigation.navigate('AddDebt' as never)}
+                onPress={() => navigation.navigate('AddDebt')}
             />
 
             <Portal>
@@ -247,10 +247,8 @@ const styles = StyleSheet.create({
     },
     emptyTitle: {
         marginTop: 16,
-        color: 'rgba(0,0,0,0.6)', // defaulting to avoid theme issue here or use inline
     },
     emptySubtitle: {
         marginTop: 8,
-        color: 'rgba(0,0,0,0.6)',
     },
 });

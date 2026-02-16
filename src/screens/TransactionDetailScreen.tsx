@@ -21,8 +21,8 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 const CATEGORIES = {
-    income: ['Maaş', 'Ek Gelir', 'Yatırım', 'Diğer'],
-    expense: ['Gıda', 'Ulaşım', 'Fatura', 'Eğlence', 'Kira', 'Sağlık', 'Giyim', 'Teknoloji', 'Diğer'],
+    income: ['salary', 'extraIncome', 'investment', 'other'] as const,
+    expense: ['market', 'food', 'transport', 'bill', 'entertainment', 'rent', 'health', 'clothing', 'technology', 'other'] as const,
 };
 
 export const TransactionDetailScreen = () => {
@@ -67,7 +67,7 @@ export const TransactionDetailScreen = () => {
                 type,
                 amount: parseFloat(data.amount), // Ensure amount is number if not already processed by zod
                 category: data.category,
-                date: date.toISOString(),
+                date: date.toISOString().split('T')[0],
                 description: data.description,
             });
             showToast(i18n.t('transactionUpdated'), 'success');
@@ -168,7 +168,7 @@ export const TransactionDetailScreen = () => {
                                         style={styles.categoryButton}
                                         compact
                                     >
-                                        {cat}
+                                        {i18n.t(cat)}
                                     </Button>
                                 ))}
                             </ScrollView>

@@ -25,6 +25,9 @@ export const PremiumBalanceCard = ({ balance, income, expense, userName, onAddPr
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.container}
+            accessible={true}
+            accessibilityRole="summary"
+            accessibilityLabel={`${i18n.t('netBalance')}: ${formatCurrency(balance)}`}
         >
             <View style={styles.patternOverlay}>
                 <View style={[styles.circle, { top: -40, right: -40, width: 140, height: 140, backgroundColor: 'rgba(255, 107, 0, 0.08)' }]} />
@@ -48,7 +51,7 @@ export const PremiumBalanceCard = ({ balance, income, expense, userName, onAddPr
                     <View style={[styles.iconBox, { backgroundColor: 'rgba(52, 199, 89, 0.15)' }]}>
                         <Icon source="arrow-up" size={18} color="#34C759" />
                     </View>
-                    <View>
+                    <View accessible={true} accessibilityLabel={`${i18n.t('income')}: ${formatCurrency(income)}`}>
                         <Text variant="labelSmall" style={styles.subLabel}>{i18n.t('income')}</Text>
                         <Text variant="titleMedium" style={styles.subValue}>{formatCurrency(income)}</Text>
                     </View>
@@ -60,7 +63,7 @@ export const PremiumBalanceCard = ({ balance, income, expense, userName, onAddPr
                     <View style={[styles.iconBox, { backgroundColor: 'rgba(255, 59, 48, 0.15)' }]}>
                         <Icon source="arrow-down" size={18} color="#FF3B30" />
                     </View>
-                    <View>
+                    <View accessible={true} accessibilityLabel={`${i18n.t('expense')}: ${formatCurrency(expense)}`}>
                         <Text variant="labelSmall" style={styles.subLabel}>{i18n.t('expense')}</Text>
                         <Text variant="titleMedium" style={styles.subValue}>{formatCurrency(expense)}</Text>
                     </View>

@@ -91,18 +91,18 @@ export const StatsScreen = () => {
                         <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>
                             {totalAmount > 0 ? (filterType === 'expense' ? `%${((totalAmount / (transactions.filter(t => isSameMonth(new Date(t.date), selectedDate) && t.type === 'income').reduce((a, c) => a + c.amount, 0) || 1)) * 100).toFixed(0)}` : '-') : '-'}
                         </Text>
-                        <Text variant="bodySmall" style={{ color: theme.colors.outline }}>Oran</Text>
+                        <Text variant="bodySmall" style={{ color: theme.colors.outline }}>{i18n.t('ratio')}</Text>
                     </Surface>
 
                     <Surface style={[styles.metricCard, { backgroundColor: theme.colors.surface }]} elevation={1}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                             <Icon source="calendar-clock" size={20} color={theme.colors.secondary} />
-                            <Text variant="labelSmall" style={{ marginLeft: 6, color: theme.colors.onSurfaceVariant }}>Günlük Ort.</Text>
+                            <Text variant="labelSmall" style={{ marginLeft: 6, color: theme.colors.onSurfaceVariant }}>{i18n.t('dailyAverage')}</Text>
                         </View>
                         <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>
                             {formatCurrency(totalAmount / new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate())}
                         </Text>
-                        <Text variant="bodySmall" style={{ color: theme.colors.outline }}>Harcama</Text>
+                        <Text variant="bodySmall" style={{ color: theme.colors.outline }}>{i18n.t('spending')}</Text>
                     </Surface>
                 </View>
 

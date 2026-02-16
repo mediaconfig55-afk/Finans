@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
+import i18n from '../i18n';
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -13,7 +14,6 @@ Notifications.setNotificationHandler({
 });
 
 export async function registerForPushNotificationsAsync() {
-    let token;
 
     if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
@@ -78,8 +78,8 @@ export async function scheduleReminderNotification(reminderId: number, title: st
             await Notifications.scheduleNotificationAsync({
                 identifier: `reminder_${reminderId}_${i}`,
                 content: {
-                    title: "Fatura Hatırlatıcı 🔔",
-                    body: `${title} için ödeme zamanı! Tutar: ${amount}₺`,
+                    title: i18n.t('notificationTitle', { defaultValue: 'Fatura Hatırlatıcı 🔔' }),
+                    body: i18n.t('notificationBody', { title, amount, defaultValue: `${title} için ödeme zamanı! Tutar: ${amount}₺` }),
                     sound: true,
                     data: { reminderId, index: i },
                 },

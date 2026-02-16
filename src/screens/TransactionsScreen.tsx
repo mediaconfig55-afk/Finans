@@ -5,7 +5,7 @@ import { Text, useTheme, Searchbar, Chip, Icon, Surface } from 'react-native-pap
 import { Swipeable } from 'react-native-gesture-handler';
 import { useStore } from '../store';
 import { formatCurrency, formatShortDate } from '../utils/format';
-import { Transaction } from '../types';
+import { Transaction, Debt } from '../types';
 import { ScreenWrapper } from '../components/ScreenWrapper';
 import { TransactionCard } from '../components/TransactionCard';
 import { groupTransactionsByDate } from '../utils/dateGrouping';
@@ -47,7 +47,7 @@ export const TransactionsScreen = () => {
     // Group all filtered data (transactions + debts)
     const groupedData = groupTransactionsByDate(filteredData);
 
-    const handleDelete = (item: any) => {
+    const handleDelete = (item: Transaction | { id: number; type: string }) => {
         hapticLight();
         Alert.alert(
             i18n.t('delete'),
@@ -68,43 +68,38 @@ export const TransactionsScreen = () => {
         );
     };
 
-    const handleEdit = (item: any) => {
+    const handleEdit = (item: Transaction | { id: number; type: string }) => {
         hapticLight();
         if (item.type !== 'debt') {
             (navigation as any).navigate('TransactionDetail', { transaction: item });
         }
     };
 
-    const renderRightActions = (item: any) => (
+    const renderRightActions = (item: Transaction | { id: number; type: string }) => (
         <View style={styles.swipeActions}>
             <TouchableOpacity
                 style={[styles.swipeButton, { backgroundColor: theme.colors.error }]}
                 onPress={() => handleDelete(item)}
             >
                 <Icon source="delete" size={24} color="#FFF" />
-                <Text style={styles.swipeText}>Sil</Text>
+                <Text style={styles.swipeText}>{i18n.t('delete')}</Text>
             </TouchableOpacity>
         </View>
     );
 
-    const renderLeftActions = (item: any) => (
+    const renderLeftActions = (item: Transaction | { id: number; type: string }) => (
         <View style={styles.swipeActions}>
             <TouchableOpacity
                 style={[styles.swipeButton, { backgroundColor: theme.colors.primary }]}
                 onPress={() => handleEdit(item)}
             >
                 <Icon source="pencil" size={24} color="#FFF" />
-                <Text style={styles.swipeText}>Düzenle</Text>
+                <Text style={styles.swipeText}>{i18n.t('edit')}</Text>
             </TouchableOpacity>
         </View>
     );
 
     const renderItem = ({ item }: { item: Transaction | (Debt & { date?: string, category?: string }) }) => {
-        const isIncome = item.type === 'income';
-        const isExpense = item.type === 'expense';
-        // const isDebt = item.type === 'debt'; // Not used
-        // const color ...
-
         return (
             <TransactionCard
                 item={item as Transaction} // TransactionCard handles display

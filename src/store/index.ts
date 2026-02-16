@@ -92,11 +92,9 @@ export const useStore = create<AppState>((set, get) => ({
         set({ loading: true, error: null });
         try {
             const transactions = await Repository.getTransactions();
-            set({ transactions });
+            set({ transactions, loading: false });
         } catch (e: any) {
             set({ error: e.message, loading: false });
-        } finally {
-            set({ loading: false });
         }
     },
 
@@ -149,7 +147,7 @@ export const useStore = create<AppState>((set, get) => ({
         try {
             await Repository.addDebt(d);
             await get().fetchDebts();
-            get().refreshDashboard();
+            await get().refreshDashboard();
         } catch (e: any) {
             set({ error: 'Borç eklenemedi: ' + e.message });
         }
@@ -159,7 +157,7 @@ export const useStore = create<AppState>((set, get) => ({
         try {
             await Repository.toggleDebtStatus(id, currentStatus);
             await get().fetchDebts();
-            get().refreshDashboard();
+            await get().refreshDashboard();
         } catch (e: any) {
             set({ error: 'Durum güncellenemedi.' });
         }
@@ -169,7 +167,7 @@ export const useStore = create<AppState>((set, get) => ({
         try {
             await Repository.deleteDebt(id);
             await get().fetchDebts();
-            get().refreshDashboard();
+            await get().refreshDashboard();
         } catch (e: any) {
             set({ error: 'Borç silinemedi.' });
         }
@@ -179,7 +177,7 @@ export const useStore = create<AppState>((set, get) => ({
         try {
             await Repository.updateDebt(debt);
             await get().fetchDebts();
-            get().refreshDashboard();
+            await get().refreshDashboard();
         } catch (e: any) {
             set({ error: 'Güncelleme başarısız.' });
         }
@@ -207,7 +205,7 @@ export const useStore = create<AppState>((set, get) => ({
         try {
             const id = await Repository.addReminder(r);
             await get().fetchReminders();
-            get().refreshDashboard();
+            await get().refreshDashboard();
             return id;
         } catch (e: any) {
             set({ error: 'Hatırlatıcı eklenemedi.' });
@@ -219,7 +217,7 @@ export const useStore = create<AppState>((set, get) => ({
         try {
             await Repository.deleteReminder(id);
             await get().fetchReminders();
-            get().refreshDashboard();
+            await get().refreshDashboard();
         } catch (e: any) {
             set({ error: 'Silinemedi.' });
         }

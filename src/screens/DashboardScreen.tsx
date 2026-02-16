@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
-import { Text, useTheme, FAB, List, Divider, IconButton, Surface, Avatar, Button, Icon } from 'react-native-paper';
+import { Text, FAB, List, Divider, IconButton, Surface, Avatar, Button, Icon } from 'react-native-paper';
 import { useFocusEffect, useNavigation, NavigationProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,15 +12,18 @@ import { useStore } from '../store';
 import { formatCurrency, formatShortDate } from '../utils/format';
 import i18n from '../i18n';
 import { RootStackParamList } from '../navigation';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 export const DashboardScreen = () => {
-    const theme = useTheme();
+    const theme = useAppTheme();
     const navigation = useNavigation<NavigationProp<RootStackParamList>>();
     const { kpi, transactions, refreshDashboard, loading, dailySpending, reminders, fetchReminders, userName } = useStore();
     const insets = useSafeAreaInsets();
 
     const totalBalance = kpi.grandTotalIncome - kpi.grandTotalExpense;
-    const today = new Date().toISOString().split('T')[0];
+    // Use LOCAL date, not UTC — transactions are saved with local date
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const todaysSpendingAmount = dailySpending.find(d => d.date === today)?.total || 0;
 
     useFocusEffect(
@@ -31,9 +34,9 @@ export const DashboardScreen = () => {
     );
 
     return (
-        <View style={[styles.container, { backgroundColor: '#000000', paddingTop: insets.top }]}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: insets.top }]}>
             <LinearGradient
-                colors={['#000000', '#121212']}
+                colors={[theme.colors.background, theme.colors.cardGradientStart]}
                 style={StyleSheet.absoluteFill}
             />
 
@@ -50,12 +53,18 @@ export const DashboardScreen = () => {
                             <Text variant="headlineSmall" style={styles.brandText}>{i18n.t('welcome')} {userName}</Text>
                         </View>
                     </View>
-                    <IconButton
-                        icon="cog"
-                        iconColor={theme.colors.onSurface}
-                        size={28}
-                        onPress={() => navigation.navigate('Settings')}
-                    />
+                    <Surface style={{
+                        borderRadius: 20,
+                        backgroundColor: 'rgba(255,255,255,0.1)',
+                        elevation: 0
+                    }} mode="flat">
+                        <IconButton
+                            icon="cog"
+                            iconColor={theme.colors.onSurface}
+                            size={24}
+                            onPress={() => navigation.navigate('Settings')}
+                        />
+                    </Surface>
                 </View>
 
                 {/* Premium Balance Card */}
@@ -115,7 +124,7 @@ export const DashboardScreen = () => {
                     <Text
                         variant="labelLarge"
                         style={{ color: theme.colors.primary }}
-                        onPress={() => navigation.navigate('TransactionsTab' as never)}
+                        onPress={() => navigation.navigate('TransactionsTab')}
                     >
                         {i18n.t('seeAll')}
                     </Text>
@@ -140,15 +149,23 @@ export const DashboardScreen = () => {
 
             </ScrollView>
 
-            <FAB
-                icon="plus"
-                style={[styles.fab, {
-                    backgroundColor: theme.colors.primary,
-                    bottom: (insets.bottom || 16) + 70 // Dynamic positioning above tab bar
-                }]}
-                color={theme.colors.onPrimary}
-                onPress={() => navigation.navigate('AddTransaction' as never)}
-            />
+            {/* FAB is now custom via TouchableOpacity + LinearGradient defined above */}
+            {/* Removing original FAB component to replace with custom one */}
+
+            <TouchableOpacity
+                style={[styles.fabContainer, { bottom: (insets.bottom || 20) + 85 }]}
+                onPress={() => navigation.navigate('AddTransaction')}
+                activeOpacity={0.9}
+            >
+                <LinearGradient
+                    colors={[theme.colors.accent, '#7C4DFF']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.fabGradient}
+                >
+                    <Icon source="plus" size={32} color="#FFFFFF" />
+                </LinearGradient>
+            </TouchableOpacity>
         </View>
     );
 };
@@ -210,7 +227,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 12,
-        backgroundColor: '#651FFF', // Secondary/Purple
+        backgroundColor: '#651FFF',
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -260,5 +277,28 @@ const styles = StyleSheet.create({
     emptyContainer: {
         padding: 20,
         alignItems: 'center',
+    },
+    fabContainer: {
+        position: 'absolute',
+        right: 20,
+        // bottom sets dynamically in render
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        shadowColor: '#651FFF',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.5,
+        shadowRadius: 16,
+        elevation: 8,
+        zIndex: 100,
+    },
+    fabGradient: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 30,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
     },
 });

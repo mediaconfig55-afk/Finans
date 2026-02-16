@@ -48,41 +48,35 @@ export const RemindersScreen = () => {
             return;
         }
 
+        const dayNum = parseInt(day);
+        if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) {
+            showToast(i18n.t('invalidDay', { defaultValue: 'Gün 1-31 arasında olmalıdır' }), 'warning');
+            return;
+        }
+
         try {
-            await addReminder({
+            const newReminderId = await addReminder({
                 title,
                 amount: parseFloat(amount),
-                dayOfMonth: parseInt(day),
+                dayOfMonth: dayNum,
                 type: 'bill'
             });
 
-            await fetchReminders();
-            const newReminder = reminders[reminders.length - 1];
+            // Build notification date from picker values
+            const notificationDate = new Date(reminderDate);
+            notificationDate.setHours(reminderTime.getHours());
+            notificationDate.setMinutes(reminderTime.getMinutes());
+            notificationDate.setSeconds(0);
 
-            if (newReminder) {
-                // Notification date logic
-                const notificationDate = new Date(reminderDate);
-                notificationDate.setHours(reminderTime.getHours());
-                notificationDate.setMinutes(reminderTime.getMinutes());
-                notificationDate.setSeconds(0);
-
-                // If the user manually entered a day (e.g. 5) but picker says today (e.g. 15), 
-                // and they want it monthly on the 5th, the picker date should probably respect the manual day input if provided.
-                // However, the new logic schedules based on the PASSED date. 
-                // Let's assume the Date Picker is the source of truth for the START date.
-                // If 'day' input is different from 'notificationDate.getDate()', we should probably sync them or prioritize one.
-                // For now, we trust the 'notificationDate' fully as it has year/month/day/time.
-
-                await scheduleReminderNotification(
-                    newReminder.id,
-                    title,
-                    parseFloat(amount),
-                    notificationDate
-                );
-            }
+            await scheduleReminderNotification(
+                newReminderId,
+                title,
+                parseFloat(amount),
+                notificationDate
+            );
 
             hideDialog();
-            showToast(`${i18n.t('reminderAdded')}`, 'success');
+            showToast(i18n.t('reminderAdded'), 'success');
         } catch (error) {
             console.error('Error adding reminder:', error);
             showToast(i18n.t('reminderAddError'), 'error');

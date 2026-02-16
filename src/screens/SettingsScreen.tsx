@@ -7,6 +7,7 @@ import { exportToExcel } from '../utils/export';
 import i18n from '../i18n';
 import * as Notifications from 'expo-notifications';
 import { useToast } from '../context/ToastContext';
+import Constants from 'expo-constants';
 
 export const SettingsScreen = () => {
     const theme = useTheme();
@@ -18,6 +19,14 @@ export const SettingsScreen = () => {
     const themeMode = useStore((state) => state.theme);
     const setTheme = useStore((state) => state.setTheme);
     const [exporting, setExporting] = useState(false);
+    const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
+    // Check real notification permission on mount
+    React.useEffect(() => {
+        Notifications.getPermissionsAsync().then(({ status }) => {
+            setNotificationsEnabled(status === 'granted');
+        });
+    }, []);
 
     const { showToast } = useToast();
 
@@ -51,7 +60,20 @@ export const SettingsScreen = () => {
     };
 
     const handleNotificationToggle = async (value: boolean) => {
-        // ... (lines 43-61 unchanged)
+        if (value) {
+            const { status } = await Notifications.requestPermissionsAsync();
+            if (status === 'granted') {
+                setNotificationsEnabled(true);
+                showToast(i18n.t('notificationsEnabled', { defaultValue: 'Bildirimler açıldı' }), 'success');
+            } else {
+                setNotificationsEnabled(false);
+                showToast(i18n.t('notificationPermissionDenied', { defaultValue: 'Bildirim izni reddedildi' }), 'error');
+            }
+        } else {
+            await Notifications.cancelAllScheduledNotificationsAsync();
+            setNotificationsEnabled(false);
+            showToast(i18n.t('notificationsDisabled', { defaultValue: 'Bildirimler kapatıldı' }), 'info');
+        }
     };
 
     return (
@@ -117,20 +139,19 @@ export const SettingsScreen = () => {
                                                 text: i18n.t('yes'),
                                                 onPress: async () => {
                                                     try {
-                                                        const repoModule = require('../database/repository');
-                                                        const Repo = repoModule.Repository;
+                                                        const { Repository } = await import('../database/repository');
 
-                                                        if (!Repo) {
+                                                        if (!Repository) {
                                                             throw new Error('Repository module not found');
                                                         }
 
-                                                        await Repo.clearAllData();
+                                                        await Repository.clearAllData();
                                                         if (data.installments && data.installments.length > 0) {
-                                                            await Repo.bulkInsertInstallments(data.installments);
+                                                            await Repository.bulkInsertInstallments(data.installments);
                                                         }
-                                                        await Repo.bulkInsertTransactions(data.transactions);
-                                                        await Repo.bulkInsertDebts(data.debts);
-                                                        await Repo.bulkInsertReminders(data.reminders);
+                                                        await Repository.bulkInsertTransactions(data.transactions);
+                                                        await Repository.bulkInsertDebts(data.debts);
+                                                        await Repository.bulkInsertReminders(data.reminders);
 
                                                         try {
                                                             useStore.getState().refreshDashboard();
@@ -173,7 +194,7 @@ export const SettingsScreen = () => {
                 <List.Item
                     title={i18n.t('notifications')}
                     left={props => <List.Icon {...props} icon="bell" />}
-                    right={() => <Switch value={true} onValueChange={handleNotificationToggle} />}
+                    right={() => <Switch value={notificationsEnabled} onValueChange={handleNotificationToggle} />}
                 />
             </List.Section>
 
@@ -181,7 +202,7 @@ export const SettingsScreen = () => {
                 <List.Subheader>{i18n.t('aboutApp')}</List.Subheader>
                 <List.Item
                     title={i18n.t('version')}
-                    description="1.0.0"
+                    description={Constants.expoConfig?.version || '1.0.2'}
                     left={props => <List.Icon {...props} icon="information" />}
                 />
             </List.Section>

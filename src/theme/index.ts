@@ -19,8 +19,24 @@ export const AppLightTheme = {
         secondary: customColors.secondary,
         tertiary: customColors.tertiary,
         error: customColors.error,
+        // Skill: Light mode text #0F172A (slate-900), muted #475569 (slate-600)
+        onSurface: '#0F172A',
+        onSurfaceVariant: '#475569',
+        outline: '#E2E8F0', // slate-200 for borders
         customIncome: customColors.income,
         customExpense: customColors.expense,
+        accent: customColors.primary,
+        cardGradientStart: '#F8FAFC',
+        cardGradientEnd: '#F1F5F9',
+        incomeIcon: '#2E7D32',
+        expenseIcon: '#C62828',
+        tabBarBg: 'rgba(255, 255, 255, 0.95)',
+        tabBarBorder: 'rgba(0,0,0,0.08)',
+        tabBarInactive: '#64748B',
+        tabDashboard: '#0A84FF',
+        tabTransactions: '#30D158',
+        tabStats: '#BF5AF2',
+        tabDebts: '#FF453A',
     },
 };
 
@@ -45,6 +61,18 @@ export const AppDarkTheme = {
         outline: '#2C2C2E',
         customIncome: '#34C759', // Apple Green
         customExpense: '#FF3B30', // Apple Red
+        accent: '#651FFF', // Deep Purple CTA
+        cardGradientStart: '#1C1C1E',
+        cardGradientEnd: '#2C2C2E',
+        incomeIcon: '#34C759',
+        expenseIcon: '#FF3B30',
+        tabBarBg: 'rgba(28, 28, 30, 0.95)',
+        tabBarBorder: 'rgba(255,255,255,0.08)',
+        tabBarInactive: '#8E8E93',
+        tabDashboard: '#0A84FF',
+        tabTransactions: '#30D158',
+        tabStats: '#BF5AF2',
+        tabDebts: '#FF453A',
         elevation: {
             level0: 'transparent',
             level1: '#1C1C1E',
@@ -58,3 +86,4 @@ export const AppDarkTheme = {
         scale: 1.0,
     },
 };
+

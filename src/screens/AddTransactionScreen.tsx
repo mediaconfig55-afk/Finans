@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
-import { TextInput, Button, SegmentedButtons, HelperText, useTheme, Switch, Text, Icon } from 'react-native-paper';
+import { TextInput, Button, SegmentedButtons, HelperText, Switch, Text, Icon } from 'react-native-paper';
 import { useForm, Controller } from 'react-hook-form';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -11,6 +11,7 @@ import { formatShortDate } from '../utils/format';
 import i18n from '../i18n';
 import { RootStackParamList } from '../navigation';
 import { useToast } from '../context/ToastContext';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 const schema = z.object({
     amount: z.string()
@@ -38,7 +39,7 @@ const CATEGORIES = {
 };
 
 export const AddTransactionScreen = () => {
-    const theme = useTheme();
+    const theme = useAppTheme();
     const navigation = useNavigation<NavigationProp<RootStackParamList>>();
     const { addTransaction, addInstallment } = useStore();
 
@@ -90,13 +91,10 @@ export const AddTransactionScreen = () => {
         }
 
         // Only set if category matches current type (expense/income) and is found
-        if (suggestedCategory && CATEGORIES[type].includes(suggestedCategory as any)) {
-            // We can optionally check if category is already set, but user asked for auto-set.
-            // Let's set it.
+        if (suggestedCategory && (CATEGORIES[type] as readonly string[]).includes(suggestedCategory)) {
             const currentCat = watch('category');
             if (currentCat !== suggestedCategory) {
-                // Using setValue from useForm, but we need to destructure it first if not available.
-                // Actually setValue is not destructured above. I need to add it.
+                setValue('category', suggestedCategory);
             }
         }
     }, [description, type]);
@@ -131,11 +129,17 @@ export const AddTransactionScreen = () => {
                 const countVal = parseInt(data.installmentCount);
                 const monthlyAmount = amountVal / countVal;
 
+                // Use local date for consistency
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const localDate = `${year}-${month}-${day}`;
+
                 await addInstallment({
                     totalAmount: amountVal,
                     totalMonths: countVal,
                     remainingMonths: countVal,
-                    startDate: date.toString(),
+                    startDate: localDate,
                     description: data.description || `${i18n.t(data.category)} ${i18n.t('installment')}`,
                 });
 
@@ -143,7 +147,7 @@ export const AddTransactionScreen = () => {
                     type: 'expense',
                     amount: monthlyAmount,
                     category: data.category,
-                    date: date.toString(),
+                    date: localDate,
                     description: `${data.description || i18n.t('installment')} (1/${countVal})`,
                 });
             } else {
@@ -205,12 +209,12 @@ export const AddTransactionScreen = () => {
                             if (val === 'debt') {
                                 navigation.navigate('AddDebt');
                             } else {
-                                setType(val as any);
+                                setType(val as 'income' | 'expense');
                             }
                         }}
                         buttons={[
-                            { value: 'income', label: i18n.t('income'), style: { backgroundColor: type === 'income' ? (theme.colors as any).customIncome + '20' : undefined } },
-                            { value: 'expense', label: i18n.t('expense'), style: { backgroundColor: type === 'expense' ? (theme.colors as any).customExpense + '20' : undefined } },
+                            { value: 'income', label: i18n.t('income'), style: { backgroundColor: type === 'income' ? theme.colors.customIncome + '20' : undefined } },
+                            { value: 'expense', label: i18n.t('expense'), style: { backgroundColor: type === 'expense' ? theme.colors.customExpense + '20' : undefined } },
                             { value: 'debt', label: i18n.t('debt'), style: { backgroundColor: theme.colors.surfaceVariant } },
                         ]}
                         style={styles.input}
