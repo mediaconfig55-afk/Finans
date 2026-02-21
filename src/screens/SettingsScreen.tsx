@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet, Alert, TouchableOpacity, Linking } from 'react-native';
 import { List, Switch, useTheme, Divider, ActivityIndicator, Text, Button } from 'react-native-paper';
 import { useStore } from '../store';
 import { exportToExcel } from '../utils/export';
@@ -199,11 +199,18 @@ export const SettingsScreen = () => {
             </List.Section>
 
             <List.Section>
-                <List.Subheader>{i18n.t('aboutApp')}</List.Subheader>
+                <TouchableOpacity onPress={() => Linking.openURL('https://mediaconfig55-afk.github.io/Privacy-Policy/')}>
+                    <List.Subheader style={{ color: theme.colors.primary }}>{i18n.t('aboutApp')}</List.Subheader>
+                </TouchableOpacity>
                 <List.Item
                     title={i18n.t('version')}
                     description={Constants.expoConfig?.version || '1.0.2'}
                     left={props => <List.Icon {...props} icon="information" />}
+                />
+                <List.Item
+                    title={i18n.t('privacyPolicy')}
+                    left={props => <List.Icon {...props} icon="shield-check" />}
+                    onPress={() => import('react-native').then(rn => rn.Linking.openURL('https://mediaconfig55-afk.github.io/Privacy-Policy/'))}
                 />
             </List.Section>
 

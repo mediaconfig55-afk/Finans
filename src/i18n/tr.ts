@@ -92,6 +92,7 @@ export default {
     notifications: 'Bildirimler',
     aboutApp: 'Uygulama Hakkında',
     version: 'Versiyon',
+    privacyPolicy: 'Gizlilik Politikası',
     footerLove: 'Finansal Özgürlüğünüz İçin ❤️ ile yapıldı',
     exportSuccessTitle: 'Başarılı',
     exportSuccessMessage: 'Veriler başarıyla dışa aktarıldı.',

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Finans",
     "slug": "Finans",
-    "version": "1.0.2",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -15,10 +15,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.fin.app"
+      "bundleIdentifier": "com.bilgin.finans"
     },
     "android": {
-      "package": "com.fin.app",
+      "package": "com.bilgin.finans",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -28,9 +28,7 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.POST_NOTIFICATIONS",
-        "android.permission.SCHEDULE_EXACT_ALARM",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
+        "android.permission.SCHEDULE_EXACT_ALARM"
       ]
     },
     "web": {
@@ -50,9 +48,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "deff3a8a-bc63-495e-b006-8819214ccf99"
+        "projectId": "c76e331e-6349-4e7c-911c-dfa3bc93c4d1"
       }
     },
-    "owner": "bilgin055"
+    "owner": "admin_r"
   }
 }
