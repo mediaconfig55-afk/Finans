@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Alert, TouchableOpacity, Linking, ScrollView } from 'react-native';
 import { List, Switch, useTheme, Divider, ActivityIndicator, Text, Button } from 'react-native-paper';
 import { PrivacyPolicyModal } from '../components/PrivacyPolicyModal';
+import { AboutAppModal } from '../components/AboutAppModal';
 import { useStore } from '../store';
 import { exportToExcel } from '../utils/export';
 import i18n from '../i18n';
@@ -24,6 +25,7 @@ export const SettingsScreen = () => {
     const [exporting, setExporting] = useState(false);
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const [showPrivacy, setShowPrivacy] = useState(false);
+    const [showAbout, setShowAbout] = useState(false);
 
     // Check real notification permission on mount
     React.useEffect(() => {
@@ -206,13 +208,14 @@ export const SettingsScreen = () => {
             </List.Section>
 
             <List.Section>
-                <TouchableOpacity onPress={() => Linking.openURL('https://mediaconfig55-afk.github.io/Privacy-Policy/')}>
+                <TouchableOpacity onPress={() => setShowAbout(true)}>
                     <List.Subheader style={{ color: theme.colors.primary }}>{i18n.t('aboutApp')}</List.Subheader>
                 </TouchableOpacity>
                 <List.Item
                     title={i18n.t('version')}
                     description={Constants.expoConfig?.version || '1.0.2'}
                     left={props => <List.Icon {...props} icon="information" />}
+                    onPress={() => setShowAbout(true)}
                 />
                 <List.Item
                     title={i18n.t('privacyPolicy')}
@@ -230,6 +233,7 @@ export const SettingsScreen = () => {
 
 
             <PrivacyPolicyModal visible={showPrivacy} onDismiss={() => setShowPrivacy(false)} />
+            <AboutAppModal visible={showAbout} onDismiss={() => setShowAbout(false)} />
         </View >
     );
 };
